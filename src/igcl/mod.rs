@@ -89,6 +89,9 @@ impl IgclBackend {
         if r != CTL_RESULT_SUCCESS {
             return Err(BackendError::DriverNotFound);
         }
+        if count == 0 {
+            return Ok(Vec::new());
+        }
         let mut handles: Vec<ctl_device_adapter_handle_t> = vec![ptr::null_mut(); count as usize];
         // SAFETY: `handles` tiene lugar para `count` elementos.
         let r =
@@ -149,6 +152,9 @@ impl IgclBackend {
         // SAFETY: struct C plano; todo-ceros es válido.
         let mut blocks: Vec<ctl_pixtx_block_config_t> =
             vec![unsafe { zeroed() }; caps.NumBlocks as usize];
+        for b in &mut blocks {
+            b.Size = size_of::<ctl_pixtx_block_config_t>() as u32;
+        }
         caps.pBlockConfigs = blocks.as_mut_ptr();
         // SAFETY: `blocks` tiene lugar para `NumBlocks` elementos.
         let r = unsafe { self.lib.ctlPixelTransformationGetConfig(display, &mut caps) };
@@ -169,20 +175,18 @@ impl IgclBackend {
 
     /// Escribe `matrix` en el bloque de matriz de cada pantalla.
     /// Intenta todas aunque alguna falle y devuelve el primer error.
-    #[allow(unused_unsafe)]
     fn write(&mut self, matrix: &Matrix3) -> Result<(), BackendError> {
         let mut first_error = None;
         for output in &self.outputs {
             // Copia del bloque de capacidades: conserva BlockId y BlockType.
             let mut block = output.block;
             block.Size = size_of::<ctl_pixtx_block_config_t>() as u32;
-            // SAFETY: el bloque es de tipo matriz, así que `MatrixConfig` es
-            // el miembro activo de la unión; solo se escriben campos `f64`.
-            unsafe {
-                block.Config.MatrixConfig.Matrix = *matrix;
-                block.Config.MatrixConfig.PreOffsets = [0.0; 3];
-                block.Config.MatrixConfig.PostOffsets = [0.0; 3];
-            }
+            // El bloque es de tipo matriz, así que `MatrixConfig` es el miembro
+            // activo de la unión (asignar campos `Copy` de una unión es seguro).
+            block.Config.MatrixConfig.Size = size_of::<ctl_pixtx_matrix_config_t>() as u32;
+            block.Config.MatrixConfig.Matrix = *matrix;
+            block.Config.MatrixConfig.PreOffsets = [0.0; 3];
+            block.Config.MatrixConfig.PostOffsets = [0.0; 3];
 
             // SAFETY: struct C plano; todo-ceros es válido.
             let mut args: ctl_pixtx_pipe_set_config_t = unsafe { zeroed() };
