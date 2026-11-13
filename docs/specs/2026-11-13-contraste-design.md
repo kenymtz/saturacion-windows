@@ -28,7 +28,7 @@ Alternativas descartadas:
 
 | Alternativa | Motivo |
 |---|---|
-| Matriz con desplazamientos (`CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX_AND_OFFSETS`), combinando saturación y contraste en una escritura | No se sabe si la UHD expone ese bloque. Queda como plan B si la curva falla en la prueba de riesgo. |
+| Matriz con desplazamientos (`CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX_AND_OFFSETS`), combinando saturación y contraste en una escritura | Al diseñar no se sabía si la UHD exponía ese bloque; la prueba de riesgo mostró que sí (bloque 327427). Quedó como plan B, que no hizo falta porque la curva pasó todas las comprobaciones. |
 | Matriz 3×3 sola (multiplicar por `c`) | Sin desplazamiento no puede pivotar en el gris medio: aclara u oscurece toda la imagen en vez de separar sombras y luces. |
 
 ## Alcance
@@ -48,7 +48,7 @@ No incluye (otras historias): brillo (#3), reacción visual de los controles (#4
 - El slider de contraste va de **50 a 200** en pasos enteros. **100 es la imagen sin modificar.** Por encima de 100, las sombras se oscurecen y las luces se aclaran; el gris medio no cambia. Por debajo de 100, la imagen se aplana hacia el gris medio.
 - Al abrir, el slider está en 100 y la app no escribe la curva hasta el primer movimiento de ese slider. Mover solo el slider de saturación no escribe la curva, y mover solo el de contraste no escribe la matriz.
 - Cada cambio se aplica de inmediato, sin botón de confirmar.
-- Contraste y saturación se combinan. En la UHD la matriz de saturación es el último bloque, así que la placa aplica la saturación **después** del contraste. El resultado es el mismo que en el orden inverso: las filas de la matriz de saturación suman 1 y la curva de contraste sin recorte es afín con un desplazamiento constante, así que ambos órdenes coinciden salvo donde los valores se recortan en 0 o 1. La prueba en hardware confirmó que los dos efectos se combinan. Una curva futura no afín (por ejemplo gamma) no conmutaría con la matriz.
+- Contraste y saturación se combinan. En la UHD la matriz de saturación es el último bloque, así que la placa aplica la saturación **después** del contraste. El resultado es el mismo que en el orden inverso: las filas de la matriz de saturación suman 1 y la curva de contraste sin recorte es afín con un desplazamiento constante e igual en los tres canales, así que ambos órdenes coinciden salvo donde los valores se recortan en 0 o 1. La prueba en hardware confirmó que los dos efectos se combinan. Una curva futura no afín (por ejemplo gamma) no conmutaría con la matriz.
 - La curva se aplica a todas las pantallas activas de la placa Intel que la reporten con muestreo uniforme.
 - Al cerrar la ventana, si la app llegó a escribir algo en la placa, restaura los bloques que tocó y termina. Si no se movió ningún slider, no toca nada.
 - Mientras la app está abierta se considera dueña de la curva de salida. Windows (luz nocturna, calibración) y algunos juegos también escriben esa curva y pueden pisarse con la app. Es una limitación aceptada; la prueba de riesgo comprueba cuánto afecta.
