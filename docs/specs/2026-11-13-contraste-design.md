@@ -76,7 +76,7 @@ Propiedades que los tests verifican:
 | Módulo | Cambio | Depende de |
 |---|---|---|
 | `color` | Función pura nueva `contrast_curve(c: f64, x: f64) -> f64`. | nada |
-| `backend` | El trait `ColorBackend` suma `apply_tone_curve(&mut self, curve: &dyn Fn(f64) -> f64) -> Result<(), BackendError>` y `supports_tone_curve(&self) -> bool`. `BackendError` suma la variante `ToneCurveUnsupported`. `restore_default` pasa a restaurar todo lo que el backend escribió (matriz y curva). | `color` |
+| `backend` | El trait `ColorBackend` suma `apply_tone_curve(&mut self, curve: &dyn Fn(f64) -> f64) -> Result<(), BackendError>` y `supports_tone_curve(&self) -> bool`. `BackendError` suma la variante `ToneCurveUnsupported`. `restore_default` pasa a restaurar solo los bloques que el backend escribió: el backend recuerda si escribió la matriz, la curva o ambas, para no resetear una curva de Windows que la app nunca tocó. | `color` |
 | `controller` | Guarda el valor de saturación y el de contraste. Suma `set_contrast(percent)` y las constantes `MIN_CONTRAST_PERCENT = 50` y `MAX_CONTRAST_PERCENT = 200`. El seguimiento de escrituras cubre ambos ajustes. | `backend`, `color` |
 | `igcl` | Por cada pantalla activa, además del bloque de matriz, guarda la **última** curva 1D que reporta, si tiene muestreo uniforme. Escribe la curva muestreando la función en `NumSamplesPerChannel` puntos uniformes y repitiéndola en cada canal. Restaura la curva con la operación `CTL_PIXTX_CONFIG_OPERTAION_TYPE_RESTORE_DEFAULT` del driver, no escribiendo una curva identidad, porque la curva por defecto podría no serlo. | `backend`, bindings FFI |
 | `ui` | Segundo slider "Contraste" con su valor. Propiedad propia para habilitarlo/deshabilitarlo. | Slint |
