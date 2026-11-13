@@ -4,6 +4,7 @@ export component AppTray inherits SystemTrayIcon {
 
     callback open();
     callback quit();
+    callback reset();
 
     clicked => {
         root.open();
@@ -14,6 +15,12 @@ export component AppTray inherits SystemTrayIcon {
             title: "Abrir";
             activated => {
                 root.open();
+            }
+        }
+        MenuItem {
+            title: "Restablecer";
+            activated => {
+                root.reset();
             }
         }
         MenuSeparator { }
