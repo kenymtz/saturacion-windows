@@ -1,0 +1,27 @@
+export component AppTray inherits SystemTrayIcon {
+    icon: @image-url("icon.png");
+    tooltip: "Ajustes de pantalla";
+
+    callback open();
+    callback quit();
+
+    clicked => {
+        root.open();
+    }
+
+    Menu {
+        MenuItem {
+            title: "Abrir";
+            activated => {
+                root.open();
+            }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: "Salir";
+            activated => {
+                root.quit();
+            }
+        }
+    }
+}

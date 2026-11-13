@@ -1,7 +1,9 @@
 import { Slider } from "std-widgets.slint";
+export { AppTray } from "tray.slint";
 
 export component AppWindow inherits Window {
     title: "Ajustes de pantalla";
+    icon: @image-url("icon.png");
     width: 360px;
 
     in-out property <float> saturation: 100;

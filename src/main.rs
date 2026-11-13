@@ -6,10 +6,15 @@ use std::rc::Rc;
 use saturacion::backend::BackendError;
 use saturacion::controller::Controller;
 use saturacion::igcl::IgclBackend;
+use slint::CloseRequestResponse;
 
 slint::include_modules!();
 
 type SharedController = Rc<RefCell<Controller<IgclBackend>>>;
+
+/// Texto que se muestra si no se pudo crear el ícono de la bandeja.
+const TRAY_UNAVAILABLE: &str =
+    "No se pudo crear el ícono de la bandeja; cerrar la ventana termina la app.";
 
 /// Muestra el resultado de una escritura: borra el error si salió bien.
 fn show_result(ui: &AppWindow, result: Result<(), BackendError>) {
@@ -34,6 +39,25 @@ fn slider_handler(
         let result = apply(&mut *controller.borrow_mut(), percent);
         show_result(&ui, result);
     }
+}
+
+/// Crea y muestra el ícono de la bandeja. `None` si la plataforma no lo permite.
+fn create_tray(ui: &AppWindow) -> Option<AppTray> {
+    let tray = AppTray::new().ok()?;
+    tray.show().ok()?;
+
+    let ui_weak = ui.as_weak();
+    let show_window = move || {
+        if let Some(ui) = ui_weak.upgrade() {
+            let _ = ui.show();
+            ui.window().set_minimized(false);
+        }
+    };
+    tray.on_open(show_window); // el clic izquierdo también llama a `open` (ver tray.slint)
+    tray.on_quit(|| {
+        let _ = slint::quit_event_loop();
+    });
+    Some(tray)
 }
 
 fn main() -> Result<(), slint::PlatformError> {
@@ -61,11 +85,29 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.on_brightness_changed(slider_handler(&ui, controller, Controller::set_brightness));
     }
 
-    let run_result = ui.run();
+    // El ícono debe vivir hasta el final de `main`: al soltarlo desaparece de la bandeja.
+    let tray = create_tray(&ui);
+    if tray.is_none() && controller.is_some() {
+        ui.set_error_text(TRAY_UNAVAILABLE.into());
+    }
+
+    // Con controlador e ícono, la X solo oculta la ventana (el ícono mantiene vivo el
+    // bucle). Sin alguno de los dos, la X termina la app.
+    let keep_running_in_tray = controller.is_some() && tray.is_some();
+    ui.window().on_close_requested(move || {
+        if !keep_running_in_tray {
+            let _ = slint::quit_event_loop();
+        }
+        CloseRequestResponse::HideWindow
+    });
+
+    ui.show()?;
+    let run_result = slint::run_event_loop();
 
     // Restaurar aunque el bucle de eventos haya terminado con error.
     if let Some(controller) = controller {
         let _ = controller.borrow_mut().shutdown();
     }
+    drop(tray);
     run_result
 }
