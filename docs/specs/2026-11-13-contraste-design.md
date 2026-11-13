@@ -17,10 +17,10 @@ Depende de: historia 1 (`docs/specs/2026-11-13-slider-saturacion-design.md`), ya
 
 ## Decisión de mecanismo
 
-El pipeline de pantalla de Intel expuesto por IGCL procesa cada pixel en tres etapas: una curva 1D de entrada (DGLUT), la matriz de color (CSC) y una curva 1D de salida (GLUT).
+El pipeline de pantalla de Intel expuesto por IGCL reporta cinco bloques, en este orden (confirmado en la prueba de riesgo): LUT 3D, curva 1D de 2049×1, matriz 3×3 con desplazamientos, curva 1D de 2049×3 y matriz 3×3.
 
-- La saturación sigue en la **matriz**, como en la historia 1.
-- El contraste va en la **curva 1D de salida**. Es la etapa que usa el ejemplo oficial de Intel (`TestBrightnessContrastGamma` en `Samples/Color_Samples/Color_Sample_App.cpp`) para brillo, contraste y gamma, y la misma curva servirá para el brillo de la historia 3.
+- La saturación sigue en la **matriz 3×3 simple** (el último bloque), como en la historia 1.
+- El contraste va en la **última curva 1D** (2049×3). Es la etapa que usa el ejemplo oficial de Intel (`TestBrightnessContrastGamma` en `Samples/Color_Samples/Color_Sample_App.cpp`) para brillo, contraste y gamma, y la misma curva servirá para el brillo de la historia 3.
 
 Cada ajuste usa su propio bloque, así que uno no pisa al otro.
 
@@ -48,7 +48,7 @@ No incluye (otras historias): brillo (#3), reacción visual de los controles (#4
 - El slider de contraste va de **50 a 200** en pasos enteros. **100 es la imagen sin modificar.** Por encima de 100, las sombras se oscurecen y las luces se aclaran; el gris medio no cambia. Por debajo de 100, la imagen se aplana hacia el gris medio.
 - Al abrir, el slider está en 100 y la app no escribe la curva hasta el primer movimiento de ese slider. Mover solo el slider de saturación no escribe la curva, y mover solo el de contraste no escribe la matriz.
 - Cada cambio se aplica de inmediato, sin botón de confirmar.
-- Contraste y saturación se combinan: la placa aplica primero la matriz de saturación y después la curva de contraste.
+- Contraste y saturación se combinan. En la UHD la matriz de saturación es el último bloque, así que la placa aplica la saturación **después** del contraste. El resultado es el mismo que en el orden inverso: las filas de la matriz de saturación suman 1 y la curva de contraste sin recorte es afín con un desplazamiento constante, así que ambos órdenes coinciden salvo donde los valores se recortan en 0 o 1. La prueba en hardware confirmó que los dos efectos se combinan. Una curva futura no afín (por ejemplo gamma) no conmutaría con la matriz.
 - La curva se aplica a todas las pantallas activas de la placa Intel que la reporten con muestreo uniforme.
 - Al cerrar la ventana, si la app llegó a escribir algo en la placa, restaura los bloques que tocó y termina. Si no se movió ningún slider, no toca nada.
 - Mientras la app está abierta se considera dueña de la curva de salida. Windows (luz nocturna, calibración) y algunos juegos también escriben esa curva y pueden pisarse con la app. Es una limitación aceptada; la prueba de riesgo comprueba cuánto afecta.
@@ -141,6 +141,11 @@ Si 1 o 3 fallan, se detiene la implementación y se vuelve a elegir mecanismo (p
 - La prueba de riesgo pasó, incluida la comprobación en pantalla completa exclusiva.
 - Al cerrar la app, la imagen vuelve a como estaba.
 - En una placa sin curva 1D uniforme, el slider de contraste queda deshabilitado con su mensaje y la saturación sigue funcionando.
+
+## Riesgos conocidos
+
+- La matriz 3×3 simple que va después de la curva de salida probablemente es el CSC de salida de Intel (usado para RGB→YCbCr en enlaces YCbCr, como algunos televisores por HDMI). Escribir la saturación ahí y restaurarla escribiendo la matriz identidad (comportamiento de la historia 1) podría ser incorrecto en esos enlaces; sin probar porque la pantalla de referencia es RGB. Posible arreglo futuro: restaurar la matriz con `RESTORE_DEFAULT` tras una comprobación en hardware, o usar el bloque de matriz con desplazamientos (CSC de la tubería, antes de la curva de salida).
+- Restaurar la curva con `RESTORE_DEFAULT` puede descartar una curva que Windows aplicó (luz nocturna, calibración ICC) hasta que Windows la vuelva a aplicar; la luz nocturna no se probó porque el usuario no la usa.
 
 ## Resultado de la prueba de riesgo
 
