@@ -1,7 +1,7 @@
 # Historia 2: ajustar el contraste desde la misma app
 
 Fecha: 2026-11-13
-Estado: diseño aprobado, pendiente de plan de implementación
+Estado: implementada y verificada en hardware (plan: `docs/plans/2026-11-13-contraste.md`)
 Depende de: historia 1 (`docs/specs/2026-11-13-slider-saturacion-design.md`), ya mergeada en `main`.
 
 ## Historia
@@ -157,3 +157,9 @@ Si 1 o 3 fallan, se detiene la implementación y se vuelve a elegir mecanismo (p
 - Combinado con saturación (sí/no): sí, con saturación 300 y contraste 150 se ven los dos efectos.
 - Restauración deja la imagen como estaba (sí/no); luz nocturna (probada/no usada, resultado): sí, restaurando la curva con RESTORE_DEFAULT la imagen quedó normal. Luz nocturna no usada por el usuario; no probada.
 - Tiempo de escritura de la curva (tres corridas): 6,56 ms (200), 6,48 ms (50), 6,53 ms (150); en las demás corridas entre 6,29 y 7,58 ms. Todas por debajo de 15 ms: la Task 5 usa escritura directa, sin coalescencia.
+
+## Resultado de la verificación de aceptación
+
+- Fecha: 2026-11-13, con la versión release que incluye los arreglos de la revisión final (commit 028204f).
+- El usuario confirmó en pantalla: al abrir, ambos sliders en 100, sin nota ni error y sin cambio de imagen; el contraste cambia en vivo al arrastrar (200 con más contraste, 50 lavada) con el gris medio fijo; saturación y contraste altos se combinan sin pisarse; al cerrar con valores altos la imagen vuelve a la normal; abrir y cerrar sin tocar no cambia la imagen.
+- No verificado a mano: el camino sin curva 1D uniforme (no reproducible en esta placa). Lo cubren los tests `backend_without_tone_curve_reports_it_as_unsupported` y `supports_contrast_reflects_backend`, y la rama de `main` que deshabilita solo el slider de contraste y muestra la nota.
