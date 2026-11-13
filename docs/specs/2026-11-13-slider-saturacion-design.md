@@ -98,7 +98,7 @@ Los bindings FFI cubren solo esas funciones y sus structs. Se generan una vez co
 ## Flujo de datos
 
 ```
-slider (0–300) → main: s = valor / 100 → color::saturation_matrix(s)
+slider (0–400) → main: s = valor / 100 → color::saturation_matrix(s)
               → ColorBackend::apply_matrix → IGCL → bloque 3×3 de la placa
 ```
 
@@ -156,7 +156,7 @@ Si 1 o 3 fallan, se detiene la implementación y se vuelve a elegir mecanismo (p
 
 - Fecha: 2026-11-13
 - Pantallas con bloque de matriz: 1 (pantalla interna, Intel UHD Graphics, driver 32.0.101.7077)
-- 300 % se distingue de 125 % (sí/no) y máximo utilizable: sí. 125 % resultó sutil a simple vista; 0 % dejó la pantalla en escala de grises, lo que confirma que la matriz se aplica. 400 % se ve más saturado que 300 %, así que el driver no recorta; a pedido del usuario el máximo del slider pasa a 400.
+- 300 % se distingue de 125 % (sí/no) y máximo utilizable: sí. 125 % resultó sutil a simple vista; 0 % dejó la pantalla en escala de grises, lo que confirma que la matriz se aplica. El usuario confirmó que 300 % se ve claramente más vivo que lo normal y que el panel de Intel al máximo. 400 % se ve más saturado que 300 %, así que el driver no recorta; a pedido del usuario el máximo del slider pasa a 400.
 - Grises sin teñir (sí/no): sí, en 300 % y 400 %.
 - Se mantiene en pantalla completa exclusiva (sí/no), juego usado: sí, con 400 % aplicado; el usuario no especificó el juego.
 - Tiempo de escritura (tres corridas): 1,22 ms (125 %), 1,08 ms (0 %), 1,48 ms (300 %); también 1,08 ms (400 %). Todas por debajo de 15 ms: la Task 5 usa la variante directa (Step 4a), sin coalescencia.
