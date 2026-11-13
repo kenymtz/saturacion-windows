@@ -1,6 +1,6 @@
 [package]
 name = "saturacion"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
@@ -10,3 +10,4 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Securit
 
 [build-dependencies]
 slint-build = "1"
+winresource = "0.1"
