@@ -3,12 +3,16 @@ import { Slider } from "std-widgets.slint";
 export component AppWindow inherits Window {
     title: "Saturación";
     width: 360px;
-    height: 150px;
+    height: 240px;
 
     in-out property <float> saturation: 100;
+    in-out property <float> contrast: 100;
     in property <bool> controls-enabled: true;
+    in property <bool> contrast-enabled: true;
+    in property <string> contrast-note: "";
     in property <string> error-text: "";
     callback saturation-changed(float);
+    callback contrast-changed(float);
 
     VerticalLayout {
         padding: 20px;
@@ -35,6 +39,35 @@ export component AppWindow inherits Window {
             changed(value) => {
                 root.saturation-changed(value);
             }
+        }
+
+        HorizontalLayout {
+            Text {
+                text: "Contraste";
+                vertical-alignment: center;
+            }
+            Text {
+                text: "\{Math.round(root.contrast)}";
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+
+        Slider {
+            minimum: 50;
+            maximum: 200;
+            step: 1;
+            enabled: root.controls-enabled && root.contrast-enabled;
+            value <=> root.contrast;
+            changed(value) => {
+                root.contrast-changed(value);
+            }
+        }
+
+        Text {
+            text: root.contrast-note;
+            color: #7f8c8d;
+            wrap: word-wrap;
         }
 
         Text {
