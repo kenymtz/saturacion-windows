@@ -1,7 +1,7 @@
 # Historia 3: ajustar el brillo desde la misma app
 
 Fecha: 2026-11-13
-Estado: diseño aprobado, pendiente de plan de implementación
+Estado: implementada y verificada en hardware (plan: `docs/plans/2026-11-13-brillo.md`)
 Depende de: historia 1 (`docs/specs/2026-11-13-slider-saturacion-design.md`) e historia 2 (`docs/specs/2026-11-13-contraste-design.md`). La rama sale de la historia 2 mientras su PR siga abierto.
 
 ## Historia
@@ -125,3 +125,9 @@ No hay prueba de riesgo aparte: el bloque, la restauración, la pantalla complet
 - El efecto se mantiene en pantalla completa exclusiva.
 - Al cerrar, la imagen vuelve a como estaba.
 - En una placa sin curva 1D uniforme, contraste y brillo quedan deshabilitados con su nota y la saturación sigue funcionando.
+
+## Resultado de la verificación de aceptación
+
+- Fecha: 2026-11-13, con la versión release del commit 9e10af6.
+- El usuario confirmó en pantalla: ventana "Ajustes de pantalla" con los tres sliders en 100, sin nota ni error y sin cambio de imagen al abrir; el brillo cambia en vivo (200 aclara sombras y medios, 50 los oscurece) sin mover el negro ni el blanco puros; saturación, contraste y brillo se combinan y mover uno no deshace los otros; el brillo aumentado se mantiene en un juego en pantalla completa exclusiva; al cerrar con valores altos la imagen vuelve a la normal; abrir y cerrar sin tocar no cambia la imagen.
+- No verificado a mano: el camino sin curva 1D uniforme (no reproducible en esta placa; cubierto por `backend_without_tone_curve_reports_it_as_unsupported`, `supports_tone_curve_reflects_backend` y la rama de `main` que deshabilita contraste y brillo) y el acomodo de la ventana cuando aparecen la nota o un mensaje de error (cosmético).
