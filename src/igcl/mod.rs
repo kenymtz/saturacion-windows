@@ -17,7 +17,7 @@ use libloading::os::windows::{Library, LOAD_LIBRARY_SEARCH_SYSTEM32};
 
 use self::bindings::*;
 use crate::backend::{BackendError, ColorBackend};
-use crate::color::{Matrix3, IDENTITY};
+use crate::color::Matrix3;
 
 /// Una pantalla activa con su bloque de matriz y, si la tiene, su curva 1D de salida.
 struct Output {
@@ -108,6 +108,15 @@ impl IgclBackend {
             }
         }
         lines
+    }
+
+    /// Una línea por pantalla con el bloque donde se escribe la saturación.
+    pub fn matrix_summary(&self) -> Vec<String> {
+        self.outputs
+            .iter()
+            .enumerate()
+            .map(|(i, o)| format!("Pantalla {i}: saturación en {}", describe_block(&o.matrix)))
+            .collect()
     }
 
     fn adapters(&self) -> Result<Vec<ctl_device_adapter_handle_t>, BackendError> {
@@ -273,6 +282,24 @@ impl IgclBackend {
         first_error.map_or(Ok(()), Err)
     }
 
+    /// Pide al driver que vuelva el bloque de matriz de cada pantalla a su valor por defecto.
+    fn restore_matrices(&self) -> Result<(), BackendError> {
+        let mut first_error = None;
+        for output in &self.outputs {
+            let mut block = output.matrix;
+            // `Size` anidado es un campo `[in]`; asignar un campo `Copy` de una unión es seguro.
+            block.Config.MatrixConfig.Size = size_of::<ctl_pixtx_matrix_config_t>() as u32;
+            if let Err(e) = self.set_block(
+                output.handle,
+                &mut block,
+                CTL_PIXTX_CONFIG_OPERTAION_TYPE_RESTORE_DEFAULT,
+            ) {
+                first_error.get_or_insert(e);
+            }
+        }
+        first_error.map_or(Ok(()), Err)
+    }
+
     /// Pide al driver que vuelva la curva 1D de salida de cada pantalla a su valor por defecto.
     fn restore_curves(&self) -> Result<(), BackendError> {
         let mut first_error = None;
@@ -308,7 +335,7 @@ impl ColorBackend for IgclBackend {
     fn restore_default(&mut self) -> Result<(), BackendError> {
         let mut first_error = None;
         if self.wrote_matrix {
-            if let Err(e) = self.write_matrix(&IDENTITY) {
+            if let Err(e) = self.restore_matrices() {
                 first_error.get_or_insert(e);
             }
             self.wrote_matrix = false;
