@@ -141,3 +141,14 @@ Si 1 o 3 fallan, se detiene la implementación y se vuelve a elegir mecanismo (p
 - La prueba de riesgo pasó, incluida la comprobación en pantalla completa exclusiva.
 - Al cerrar la app, la imagen vuelve a como estaba.
 - En una placa sin curva 1D uniforme, el slider de contraste queda deshabilitado con su mensaje y la saturación sigue funcionando.
+
+## Resultado de la prueba de riesgo
+
+- Fecha: 2026-11-13
+- Bloques reportados por pantalla: 1 pantalla (interna, Intel UHD Graphics, driver 32.0.101.7077) con, en este orden: LUT 3D (327425), curva 1D uniforme de 2049 muestras x 1 canal (327426), matriz 3x3 con desplazamientos (327427), curva 1D uniforme de 2049 muestras x 3 canales (327428) y matriz 3x3 (327429).
+- Curva 1D uniforme disponible (sí/no), muestras y canales: sí. La app usa la última curva 1D (327428): 2049 muestras x 3 canales.
+- 200 con más contraste y gris medio fijo (sí/no); 50 más plano (sí/no): sí y sí. Con 50 el usuario la describió como "muy blanca y los oscuros se ven casi grises": imagen lavada, con los negros elevados hacia el gris, lo esperado para contraste bajo.
+- Se mantiene en pantalla completa exclusiva (sí/no), juego usado: sí, con contraste 200 aplicado; el usuario no especificó el juego.
+- Combinado con saturación (sí/no): sí, con saturación 300 y contraste 150 se ven los dos efectos.
+- Restauración deja la imagen como estaba (sí/no); luz nocturna (probada/no usada, resultado): sí, restaurando la curva con RESTORE_DEFAULT la imagen quedó normal. Luz nocturna no usada por el usuario; no probada.
+- Tiempo de escritura de la curva (tres corridas): 6,56 ms (200), 6,48 ms (50), 6,53 ms (150); en las demás corridas entre 6,29 y 7,58 ms. Todas por debajo de 15 ms: la Task 5 usa escritura directa, sin coalescencia.
