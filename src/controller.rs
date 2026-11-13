@@ -35,6 +35,13 @@ impl<B: ColorBackend> Controller<B> {
     }
 }
 
+/// Restaura la pantalla si la app termina sin llamar a `shutdown` (p. ej. por un pánico).
+impl<B: ColorBackend> Drop for Controller<B> {
+    fn drop(&mut self) {
+        let _ = self.shutdown();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
@@ -121,6 +128,31 @@ mod tests {
     fn shutdown_without_writes_does_not_touch_the_display() {
         let (mut c, calls) = controller(None);
         c.shutdown().unwrap();
+        assert!(calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn dropping_after_a_write_restores() {
+        let (mut c, calls) = controller(None);
+        c.set_saturation(150).unwrap();
+        drop(c);
+        assert_eq!(calls.borrow().last(), Some(&Call::Restore));
+    }
+
+    #[test]
+    fn dropping_after_shutdown_does_not_restore_twice() {
+        let (mut c, calls) = controller(None);
+        c.set_saturation(150).unwrap();
+        c.shutdown().unwrap();
+        drop(c);
+        let restores = calls.borrow().iter().filter(|c| **c == Call::Restore).count();
+        assert_eq!(restores, 1);
+    }
+
+    #[test]
+    fn dropping_without_writes_does_not_touch_the_display() {
+        let (c, calls) = controller(None);
+        drop(c);
         assert!(calls.borrow().is_empty());
     }
 }
