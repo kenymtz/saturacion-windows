@@ -1,4 +1,4 @@
-import { Slider } from "std-widgets.slint";
+import { Button, CheckBox, Slider } from "std-widgets.slint";
 export { AppTray } from "tray.slint";
 
 export component AppWindow inherits Window {
@@ -16,6 +16,11 @@ export component AppWindow inherits Window {
     callback saturation-changed(float);
     callback contrast-changed(float);
     callback brightness-changed(float);
+    in-out property <bool> autostart: false;
+    in property <bool> autostart-available: true;
+    callback autostart-toggled(bool);
+    callback reset-requested();
+    callback settings-committed();
 
     VerticalLayout {
         padding: 20px;
@@ -42,6 +47,9 @@ export component AppWindow inherits Window {
             changed(value) => {
                 root.saturation-changed(value);
             }
+            released(value) => {
+                root.settings-committed();
+            }
         }
 
         HorizontalLayout {
@@ -65,6 +73,9 @@ export component AppWindow inherits Window {
             changed(value) => {
                 root.contrast-changed(value);
             }
+            released(value) => {
+                root.settings-committed();
+            }
         }
 
         HorizontalLayout {
@@ -87,6 +98,26 @@ export component AppWindow inherits Window {
             value <=> root.brightness;
             changed(value) => {
                 root.brightness-changed(value);
+            }
+            released(value) => {
+                root.settings-committed();
+            }
+        }
+
+        CheckBox {
+            text: "Iniciar con Windows";
+            enabled: root.autostart-available;
+            checked <=> root.autostart;
+            toggled => {
+                root.autostart-toggled(self.checked);
+            }
+        }
+
+        Button {
+            text: "Restablecer";
+            enabled: root.controls-enabled;
+            clicked => {
+                root.reset-requested();
             }
         }
 

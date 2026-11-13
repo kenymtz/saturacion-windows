@@ -14,6 +14,16 @@ pub const MAX_CONTRAST_PERCENT: u32 = 200;
 pub const MIN_BRIGHTNESS_PERCENT: u32 = 50;
 pub const MAX_BRIGHTNESS_PERCENT: u32 = 200;
 
+/// Factor de contraste (1.0 = sin cambios) para un porcentaje, recortado a su rango.
+fn contrast_factor(percent: u32) -> f64 {
+    f64::from(percent.clamp(MIN_CONTRAST_PERCENT, MAX_CONTRAST_PERCENT)) / 100.0
+}
+
+/// Factor de brillo (1.0 = sin cambios) para un porcentaje, recortado a su rango.
+fn brightness_factor(percent: u32) -> f64 {
+    f64::from(percent.clamp(MIN_BRIGHTNESS_PERCENT, MAX_BRIGHTNESS_PERCENT)) / 100.0
+}
+
 pub struct Controller<B: ColorBackend> {
     backend: B,
     /// Verdadero desde el primer intento de escritura: una escritura fallida
@@ -39,22 +49,53 @@ impl<B: ColorBackend> Controller<B> {
     /// Aplica el contraste indicado en porcentaje (100 = sin cambios), limitado a 50–200,
     /// conservando el brillo vigente.
     pub fn set_contrast(&mut self, percent: u32) -> Result<(), BackendError> {
-        self.contrast =
-            f64::from(percent.clamp(MIN_CONTRAST_PERCENT, MAX_CONTRAST_PERCENT)) / 100.0;
+        self.contrast = contrast_factor(percent);
         self.write_tone_curve()
     }
 
     /// Aplica el brillo indicado en porcentaje (100 = sin cambios), limitado a 50–200,
     /// conservando el contraste vigente.
     pub fn set_brightness(&mut self, percent: u32) -> Result<(), BackendError> {
-        self.brightness =
-            f64::from(percent.clamp(MIN_BRIGHTNESS_PERCENT, MAX_BRIGHTNESS_PERCENT)) / 100.0;
+        self.brightness = brightness_factor(percent);
         self.write_tone_curve()
     }
 
     /// Si la placa permite ajustar contraste y brillo.
     pub fn supports_tone_curve(&self) -> bool {
         self.backend.supports_tone_curve()
+    }
+
+    /// Aplica los valores guardados al abrir la app. Escribe solo lo que difiere de 100:
+    /// la matriz si cambia la saturación y una sola curva si cambian contraste o brillo
+    /// (si la placa la admite). Intenta ambas escrituras y devuelve el primer error.
+    pub fn apply_saved(
+        &mut self,
+        saturation: u32,
+        contrast: u32,
+        brightness: u32,
+    ) -> Result<(), BackendError> {
+        let mut first_error = None;
+        if saturation != 100 {
+            if let Err(e) = self.set_saturation(saturation) {
+                first_error.get_or_insert(e);
+            }
+        }
+        if (contrast != 100 || brightness != 100) && self.supports_tone_curve() {
+            self.contrast = contrast_factor(contrast);
+            self.brightness = brightness_factor(brightness);
+            if let Err(e) = self.write_tone_curve() {
+                first_error.get_or_insert(e);
+            }
+        }
+        first_error.map_or(Ok(()), Err)
+    }
+
+    /// Vuelve contraste y brillo a 1.0 y devuelve la imagen a la normal si la app la
+    /// había modificado. El controlador sigue listo para nuevas escrituras.
+    pub fn reset(&mut self) -> Result<(), BackendError> {
+        self.contrast = 1.0;
+        self.brightness = 1.0;
+        self.shutdown()
     }
 
     /// Escribe la curva que combina el contraste y el brillo vigentes.
@@ -313,5 +354,63 @@ mod tests {
         c.set_brightness(150).unwrap();
         c.shutdown().unwrap();
         assert_eq!(calls.borrow().last(), Some(&Call::Restore));
+    }
+
+    #[test]
+    fn reset_restores_and_returns_factors_to_neutral() {
+        let (mut c, calls) = controller(None);
+        c.set_brightness(50).unwrap();
+        c.reset().unwrap();
+        assert_eq!(calls.borrow().last(), Some(&Call::Restore));
+        c.set_contrast(200).unwrap();
+        assert_last_curve(&calls, [0.0, 0.0, 0.5, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn reset_without_writes_does_not_touch_the_display() {
+        let (mut c, calls) = controller(None);
+        c.reset().unwrap();
+        assert!(calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn apply_saved_at_neutral_values_writes_nothing() {
+        let (mut c, calls) = controller(None);
+        c.apply_saved(100, 100, 100).unwrap();
+        assert!(calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn apply_saved_with_only_saturation_writes_only_the_matrix() {
+        let (mut c, calls) = controller(None);
+        c.apply_saved(150, 100, 100).unwrap();
+        assert_eq!(*calls.borrow(), vec![Call::Apply(saturation_matrix(1.5))]);
+    }
+
+    #[test]
+    fn apply_saved_writes_matrix_and_one_combined_curve() {
+        let (mut c, calls) = controller(None);
+        c.apply_saved(250, 200, 50).unwrap();
+        assert_eq!(calls.borrow().len(), 2);
+        assert_eq!(calls.borrow()[0], Call::Apply(saturation_matrix(2.5)));
+        assert_last_curve(&calls, [0.0, 0.0, 0.25, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn apply_saved_with_only_brightness_writes_only_the_curve() {
+        let (mut c, calls) = controller(None);
+        c.apply_saved(100, 100, 50).unwrap();
+        assert_eq!(calls.borrow().len(), 1);
+        assert_last_curve(&calls, [0.0, 0.0625, 0.25, 0.5625, 1.0]);
+    }
+
+    #[test]
+    fn apply_saved_skips_the_curve_when_unsupported() {
+        let calls = Rc::new(RefCell::new(Vec::new()));
+        let backend =
+            FakeBackend { calls: Rc::clone(&calls), fail_with: None, curve_supported: false };
+        let mut c = Controller::new(backend);
+        c.apply_saved(150, 200, 100).unwrap();
+        assert_eq!(*calls.borrow(), vec![Call::Apply(saturation_matrix(1.5))]);
     }
 }
