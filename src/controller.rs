@@ -1,7 +1,7 @@
 //! Une el valor del slider con el backend de color.
 
 use crate::backend::{BackendError, ColorBackend};
-use crate::color::{contrast_curve, saturation_matrix};
+use crate::color::{saturation_matrix, tone_curve};
 
 /// Máximo del slider de saturación, en porcentaje. 100 es la imagen sin modificar.
 pub const MAX_PERCENT: u32 = 400;
@@ -10,16 +10,23 @@ pub const MAX_PERCENT: u32 = 400;
 pub const MIN_CONTRAST_PERCENT: u32 = 50;
 pub const MAX_CONTRAST_PERCENT: u32 = 200;
 
+/// Rango del slider de brillo, en porcentaje. 100 es la imagen sin modificar.
+pub const MIN_BRIGHTNESS_PERCENT: u32 = 50;
+pub const MAX_BRIGHTNESS_PERCENT: u32 = 200;
+
 pub struct Controller<B: ColorBackend> {
     backend: B,
     /// Verdadero desde el primer intento de escritura: una escritura fallida
     /// puede haber llegado a alguna pantalla, así que también obliga a restaurar.
     wrote: bool,
+    /// Factores vigentes de la curva de tono (1.0 = sin cambios).
+    contrast: f64,
+    brightness: f64,
 }
 
 impl<B: ColorBackend> Controller<B> {
     pub fn new(backend: B) -> Self {
-        Self { backend, wrote: false }
+        Self { backend, wrote: false, contrast: 1.0, brightness: 1.0 }
     }
 
     /// Aplica la saturación indicada en porcentaje (100 = sin cambios).
@@ -29,16 +36,32 @@ impl<B: ColorBackend> Controller<B> {
         self.backend.apply_matrix(&saturation_matrix(s))
     }
 
-    /// Aplica el contraste indicado en porcentaje (100 = sin cambios), limitado a 50–200.
+    /// Aplica el contraste indicado en porcentaje (100 = sin cambios), limitado a 50–200,
+    /// conservando el brillo vigente.
     pub fn set_contrast(&mut self, percent: u32) -> Result<(), BackendError> {
-        let c = f64::from(percent.clamp(MIN_CONTRAST_PERCENT, MAX_CONTRAST_PERCENT)) / 100.0;
-        self.wrote = true;
-        self.backend.apply_tone_curve(&|x| contrast_curve(c, x))
+        self.contrast =
+            f64::from(percent.clamp(MIN_CONTRAST_PERCENT, MAX_CONTRAST_PERCENT)) / 100.0;
+        self.write_tone_curve()
     }
 
-    /// Si la placa permite ajustar el contraste.
-    pub fn supports_contrast(&self) -> bool {
+    /// Aplica el brillo indicado en porcentaje (100 = sin cambios), limitado a 50–200,
+    /// conservando el contraste vigente.
+    pub fn set_brightness(&mut self, percent: u32) -> Result<(), BackendError> {
+        self.brightness =
+            f64::from(percent.clamp(MIN_BRIGHTNESS_PERCENT, MAX_BRIGHTNESS_PERCENT)) / 100.0;
+        self.write_tone_curve()
+    }
+
+    /// Si la placa permite ajustar contraste y brillo.
+    pub fn supports_tone_curve(&self) -> bool {
         self.backend.supports_tone_curve()
+    }
+
+    /// Escribe la curva que combina el contraste y el brillo vigentes.
+    fn write_tone_curve(&mut self) -> Result<(), BackendError> {
+        let (c, b) = (self.contrast, self.brightness);
+        self.wrote = true;
+        self.backend.apply_tone_curve(&|x| tone_curve(c, b, x))
     }
 
     /// Devuelve la imagen a la normal si la app llegó a modificarla.
@@ -230,12 +253,65 @@ mod tests {
     }
 
     #[test]
-    fn supports_contrast_reflects_backend() {
+    fn supports_tone_curve_reflects_backend() {
         let (c, _) = controller(None);
-        assert!(c.supports_contrast());
+        assert!(c.supports_tone_curve());
 
         let calls = Rc::new(RefCell::new(Vec::new()));
         let backend = FakeBackend { calls, fail_with: None, curve_supported: false };
-        assert!(!Controller::new(backend).supports_contrast());
+        assert!(!Controller::new(backend).supports_tone_curve());
+    }
+
+    /// Compara la última curva registrada con muestras esperadas, con tolerancia.
+    fn assert_last_curve(calls: &Rc<RefCell<Vec<Call>>>, expected: [f64; 5]) {
+        match calls.borrow().last() {
+            Some(Call::Curve(samples)) => {
+                for (got, want) in samples.iter().zip(expected) {
+                    assert!((got - want).abs() < 1e-12, "{samples:?} != {expected:?}");
+                }
+            }
+            other => panic!("se esperaba una curva, llegó {other:?}"),
+        }
+    }
+
+    #[test]
+    fn brightness_value_becomes_tone_curve_without_touching_the_matrix() {
+        let (mut c, calls) = controller(None);
+        c.set_brightness(50).unwrap();
+        assert_eq!(calls.borrow().len(), 1);
+        assert_last_curve(&calls, [0.0, 0.0625, 0.25, 0.5625, 1.0]);
+    }
+
+    #[test]
+    fn brightness_outside_range_is_clamped() {
+        let (mut c, calls) = controller(None);
+        c.set_brightness(900).unwrap();
+        assert_last_curve(&calls, [0.0, 0.5, 0.5_f64.sqrt(), 0.75_f64.sqrt(), 1.0]);
+        c.set_brightness(10).unwrap();
+        assert_last_curve(&calls, [0.0, 0.0625, 0.25, 0.5625, 1.0]);
+    }
+
+    #[test]
+    fn brightness_keeps_current_contrast() {
+        let (mut c, calls) = controller(None);
+        c.set_contrast(200).unwrap();
+        c.set_brightness(50).unwrap();
+        assert_last_curve(&calls, [0.0, 0.0, 0.25, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn contrast_keeps_current_brightness() {
+        let (mut c, calls) = controller(None);
+        c.set_brightness(50).unwrap();
+        c.set_contrast(200).unwrap();
+        assert_last_curve(&calls, [0.0, 0.0, 0.25, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn shutdown_restores_after_a_brightness_write() {
+        let (mut c, calls) = controller(None);
+        c.set_brightness(150).unwrap();
+        c.shutdown().unwrap();
+        assert_eq!(calls.borrow().last(), Some(&Call::Restore));
     }
 }

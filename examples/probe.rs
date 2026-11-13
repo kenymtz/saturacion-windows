@@ -1,20 +1,21 @@
 //! Prueba de riesgo: lista los bloques de color, aplica saturación y, opcionalmente,
-//! contraste, y espera Enter para restaurar.
-//! Uso: cargo run --example probe -- <saturación> [contraste]
-//! Ejemplos: `-- 300` (saturación), `-- 100 200` (contraste), `-- 300 150` (ambos).
+//! contraste y brillo, y espera Enter para restaurar.
+//! Uso: cargo run --example probe -- <saturación> [contraste] [brillo]
+//! Ejemplos: `-- 300` (saturación), `-- 100 200` (contraste), `-- 100 100 150` (brillo).
 
 use std::io::{self, BufRead};
 use std::process::ExitCode;
 use std::time::Instant;
 
 use saturacion::backend::ColorBackend;
-use saturacion::color::{contrast_curve, saturation_matrix};
+use saturacion::color::{saturation_matrix, tone_curve};
 use saturacion::igcl::IgclBackend;
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     let saturation: f64 = args.next().and_then(|a| a.parse().ok()).unwrap_or(300.0);
     let contrast: Option<f64> = args.next().and_then(|a| a.parse().ok());
+    let brightness: Option<f64> = args.next().and_then(|a| a.parse().ok());
 
     let mut backend = match IgclBackend::new() {
         Ok(backend) => backend,
@@ -38,15 +39,20 @@ fn main() -> ExitCode {
     }
     println!("Saturación {saturation}% aplicada en {:?}", start.elapsed());
 
-    if let Some(contrast) = contrast {
-        let c = contrast / 100.0;
+    if contrast.is_some() || brightness.is_some() {
+        let contrast = contrast.unwrap_or(100.0);
+        let brightness = brightness.unwrap_or(100.0);
+        let (c, b) = (contrast / 100.0, brightness / 100.0);
         let start = Instant::now();
-        if let Err(e) = backend.apply_tone_curve(&|x| contrast_curve(c, x)) {
+        if let Err(e) = backend.apply_tone_curve(&|x| tone_curve(c, b, x)) {
             eprintln!("{e}");
             let _ = backend.restore_default();
             return ExitCode::FAILURE;
         }
-        println!("Contraste {contrast}% aplicado en {:?}", start.elapsed());
+        println!(
+            "Contraste {contrast}% y brillo {brightness}% aplicados en {:?}",
+            start.elapsed()
+        );
     }
 
     println!("Enter para restaurar la imagen normal...");

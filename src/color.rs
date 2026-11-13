@@ -1,4 +1,4 @@
-//! Ajustes de color: matriz de saturación y curva de contraste. Funciones puras, sin dependencias de placa ni de UI.
+//! Ajustes de color: matriz de saturación y curvas de contraste y brillo. Funciones puras, sin dependencias de placa ni de UI.
 
 /// Matriz 3×3 indexada `[fila][columna]`; salida = M × vector columna RGB.
 pub type Matrix3 = [[f64; 3]; 3];
@@ -24,6 +24,17 @@ pub fn saturation_matrix(s: f64) -> Matrix3 {
 /// `c = 1.0` deja la imagen igual; `> 1.0` oscurece sombras y aclara luces; `< 1.0` aplana.
 pub fn contrast_curve(c: f64, x: f64) -> f64 {
     (0.5 + c * (x - 0.5)).clamp(0.0, 1.0)
+}
+
+/// Curva de brillo tipo gamma: `y = x^(1/b)`. `b = 1.0` deja la imagen igual; `> 1.0`
+/// aclara medios y sombras; `< 1.0` los oscurece. El negro y el blanco no cambian.
+pub fn brightness_curve(b: f64, x: f64) -> f64 {
+    x.clamp(0.0, 1.0).powf(1.0 / b)
+}
+
+/// Curva de tono que se escribe en la placa: primero contraste, después brillo.
+pub fn tone_curve(c: f64, b: f64, x: f64) -> f64 {
+    brightness_curve(b, contrast_curve(c, x))
 }
 
 #[cfg(test)]
@@ -118,5 +129,59 @@ mod tests {
     fn half_contrast_flattens_toward_mid_gray() {
         assert!(close(contrast_curve(0.5, 0.0), 0.25));
         assert!(close(contrast_curve(0.5, 1.0), 0.75));
+    }
+
+    #[test]
+    fn brightness_one_is_identity() {
+        for x in [0.0, 0.1, 0.25, 0.5, 0.9, 1.0] {
+            assert!(close(brightness_curve(1.0, x), x), "x={x}");
+        }
+    }
+
+    #[test]
+    fn brightness_keeps_black_and_white() {
+        for b in [0.5, 1.0, 1.5, 2.0] {
+            assert!(close(brightness_curve(b, 0.0), 0.0), "b={b}");
+            assert!(close(brightness_curve(b, 1.0), 1.0), "b={b}");
+        }
+    }
+
+    #[test]
+    fn brightness_above_one_lightens_and_below_one_darkens() {
+        for i in 0..=100 {
+            let x = f64::from(i) / 100.0;
+            assert!(brightness_curve(2.0, x) >= x - 1e-12, "x={x}");
+            assert!(brightness_curve(0.5, x) <= x + 1e-12, "x={x}");
+        }
+    }
+
+    #[test]
+    fn brightness_curve_never_decreases() {
+        for b in [0.5, 1.0, 1.5, 2.0] {
+            let mut previous = brightness_curve(b, 0.0);
+            for i in 1..=100 {
+                let y = brightness_curve(b, f64::from(i) / 100.0);
+                assert!(y >= previous, "b={b}, i={i}");
+                previous = y;
+            }
+        }
+    }
+
+    #[test]
+    fn brightness_reference_values() {
+        assert!(close(brightness_curve(2.0, 0.25), 0.5));
+        assert!(close(brightness_curve(0.5, 0.5), 0.25));
+    }
+
+    #[test]
+    fn tone_curve_applies_contrast_then_brightness() {
+        for i in 0..=20 {
+            let x = f64::from(i) / 20.0;
+            assert!(close(tone_curve(1.0, 1.0, x), x), "x={x}");
+            for (c, b) in [(2.0, 0.5), (0.5, 2.0), (1.5, 1.5)] {
+                let expected = brightness_curve(b, contrast_curve(c, x));
+                assert!(close(tone_curve(c, b, x), expected), "c={c}, b={b}, x={x}");
+            }
+        }
     }
 }

@@ -1,18 +1,19 @@
 import { Slider } from "std-widgets.slint";
 
 export component AppWindow inherits Window {
-    title: "Saturación";
+    title: "Ajustes de pantalla";
     width: 360px;
-    height: 240px;
 
     in-out property <float> saturation: 100;
     in-out property <float> contrast: 100;
+    in-out property <float> brightness: 100;
     in property <bool> controls-enabled: true;
-    in property <bool> contrast-enabled: true;
-    in property <string> contrast-note: "";
+    in property <bool> tone-enabled: true;
+    in property <string> tone-note: "";
     in property <string> error-text: "";
     callback saturation-changed(float);
     callback contrast-changed(float);
+    callback brightness-changed(float);
 
     VerticalLayout {
         padding: 20px;
@@ -57,20 +58,43 @@ export component AppWindow inherits Window {
             minimum: 50;
             maximum: 200;
             step: 1;
-            enabled: root.controls-enabled && root.contrast-enabled;
+            enabled: root.controls-enabled && root.tone-enabled;
             value <=> root.contrast;
             changed(value) => {
                 root.contrast-changed(value);
             }
         }
 
-        Text {
-            text: root.contrast-note;
+        HorizontalLayout {
+            Text {
+                text: "Brillo";
+                vertical-alignment: center;
+            }
+            Text {
+                text: "\{Math.round(root.brightness)}";
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+
+        Slider {
+            minimum: 50;
+            maximum: 200;
+            step: 1;
+            enabled: root.controls-enabled && root.tone-enabled;
+            value <=> root.brightness;
+            changed(value) => {
+                root.brightness-changed(value);
+            }
+        }
+
+        if root.tone-note != "": Text {
+            text: root.tone-note;
             color: #7f8c8d;
             wrap: word-wrap;
         }
 
-        Text {
+        if root.error-text != "": Text {
             text: root.error-text;
             color: #c0392b;
             wrap: word-wrap;
