@@ -144,7 +144,7 @@ Si 1 o 3 fallan, se detiene la implementación y se vuelve a elegir mecanismo (p
 
 ## Riesgos conocidos
 
-- La matriz 3×3 simple que va después de la curva de salida probablemente es el CSC de salida de Intel (usado para RGB→YCbCr en enlaces YCbCr, como algunos televisores por HDMI). Escribir la saturación ahí y restaurarla escribiendo la matriz identidad (comportamiento de la historia 1) podría ser incorrecto en esos enlaces; sin probar porque la pantalla de referencia es RGB. Posible arreglo futuro: restaurar la matriz con `RESTORE_DEFAULT` tras una comprobación en hardware, o usar el bloque de matriz con desplazamientos (CSC de la tubería, antes de la curva de salida).
+- La matriz 3×3 simple que va después de la curva de salida probablemente es el CSC de salida de Intel (usado para RGB→YCbCr en enlaces YCbCr, como algunos televisores por HDMI). Escribir la saturación ahí y restaurarla escribiendo la matriz identidad (comportamiento de la historia 1) podría ser incorrecto en esos enlaces; sin probar porque la pantalla de referencia es RGB. Posible arreglo futuro: restaurar la matriz con `RESTORE_DEFAULT` tras una comprobación en hardware, o usar el bloque de matriz con desplazamientos (CSC de la tubería, antes de la curva de salida). Resuelto con ambos arreglos en `docs/specs/2026-11-13-bloque-matriz-saturacion-design.md`: la saturación pasó a la matriz con desplazamientos y la matriz se restaura con `RESTORE_DEFAULT`.
 - Restaurar la curva con `RESTORE_DEFAULT` puede descartar una curva que Windows aplicó (luz nocturna, calibración ICC) hasta que Windows la vuelva a aplicar; la luz nocturna no se probó porque el usuario no la usa.
 
 ## Resultado de la prueba de riesgo

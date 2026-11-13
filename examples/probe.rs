@@ -28,6 +28,9 @@ fn main() -> ExitCode {
     for line in backend.block_summary() {
         println!("  {line}");
     }
+    for line in backend.matrix_summary() {
+        println!("  {line}");
+    }
     let curve_available = if backend.supports_tone_curve() { "sí" } else { "no" };
     println!("Curva 1D uniforme disponible: {curve_available}");
 
