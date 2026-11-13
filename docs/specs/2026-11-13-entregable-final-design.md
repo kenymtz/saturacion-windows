@@ -1,7 +1,7 @@
 # Entregable final: recordar valores, seguridad, instalador y restablecer
 
 Fecha: 2026-11-13
-Estado: diseño aprobado, pendiente de plan de implementación
+Estado: implementada y verificada en hardware, con dos puntos sin verificar a mano (plan: `docs/plans/2026-11-13-entregable-final.md`)
 Depende de: historias 1 a 3, bandeja y bloque de matriz (todo en `main`).
 
 ## Pedido
@@ -145,3 +145,23 @@ Solo Valve y FACEIT pueden garantizar que la app no cause un ban. El entregable 
 - Soporte NVIDIA/AMD (historia 7), reacción visual de controles (historia 4).
 - Restaurar al cerrar sesión o apagar (riesgo documentado en la spec de la bandeja).
 - Publicar el instalador como release en GitHub (se decide al final).
+
+## Resultado de la verificación de aceptación
+
+Fecha: 2026-11-13, con el instalador generado desde el commit a25782d.
+
+Verificado:
+
+- **Instalación** (comprobado en el sistema): sin administrador; `Ajustes de pantalla.exe` 1.0.0 en `%LOCALAPPDATA%\Programs\Ajustes de pantalla`; acceso directo en el escritorio y en el menú Inicio; entrada en Configuración > Aplicaciones con el ícono; entrada `Run` con el formato exacto; el archivo sobrante del script anterior (`icon.ico`) se eliminó.
+- **Recordar valores** (usuario y archivo): 250/120/110 se guardaron al soltar los sliders y la app volvió a abrir con esos valores aplicados.
+- **Instancia única** (usuario): abrir el acceso directo con la app corriendo trajo la misma ventana, sin segunda copia.
+- **Casilla "Iniciar con Windows"** (comprobado en el registro): aparecía marcada; al desmarcarla se borró la entrada `Run` y al marcarla volvió con el formato exacto.
+- **Arranque como al iniciar sesión** (usuario): ejecutando el comando de la entrada `Run` la app arrancó solo en la bandeja, sin ventana, con los valores aplicados. No se hizo un reinicio real de Windows.
+- **Reinstalar con la app abierta** (usuario): el instalador cerró la app restaurando la imagen, reinstaló y al abrirla aplicó los valores guardados.
+- **FACEIT** (usuario): sin aviso con la app en la bandeja (detalle en `docs/SEGURIDAD.md`).
+
+No verificado a mano:
+
+- **Restablecer** (ventana y bandeja): cubierto por los tests del controlador (`reset_*`) y por las revisiones de código, pero no se probó en pantalla.
+- **Desinstalar**: no se probó la desinstalación (cierre de la app, borrado de accesos directos y de la entrada `Run`, conservación de `ajustes.txt`).
+- Reinicio real de Windows.

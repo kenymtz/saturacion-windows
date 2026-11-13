@@ -35,4 +35,4 @@ El código es público: <https://github.com/kenymtz/saturacion-windows>. Cualqui
 
 ## Prueba con el cliente de FACEIT
 
-Pendiente de la verificación con el usuario.
+2026-11-13: con la app 1.0.0 instalada, corriendo en la bandeja y con ajustes aplicados, el usuario abrió el cliente de FACEIT y no apareció ningún aviso sobre la app. Es una prueba puntual en una sola PC, no una certificación de FACEIT.
