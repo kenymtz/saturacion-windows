@@ -1,7 +1,7 @@
 # Marca en el 100 de cada slider
 
 Fecha: 2026-11-13
-Estado: diseño aprobado, pendiente de implementación
+Estado: implementada y verificada en pantalla
 Relacionado: historia 4 del backlog ("que los controles reaccionen visualmente"). El usuario eligió mantener la ventana simple y pidió solo esto.
 
 ## Pedido
@@ -33,3 +33,9 @@ Relacionado: historia 4 del backlog ("que los controles reaccionen visualmente")
 ## Limitación
 
 La posición depende de la geometría del estilo Fluent de Slint 1.18.1. Si cambia el estilo o la versión de Slint, hay que revisar la fórmula.
+
+## Resultado de la verificación
+
+- Fecha: 2026-11-13, con la versión release del commit 33a1a11.
+- El usuario confirmó que la rayita queda justo debajo del 100 y que al tocarla el slider va a 100 y la imagen cambia.
+- El archivo de ajustes confirmó el guardado: tras tocar la marca de saturación, `ajustes.txt` pasó a `saturacion=100` con los demás valores intactos.
