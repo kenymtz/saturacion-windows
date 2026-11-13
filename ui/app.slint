@@ -1,0 +1,46 @@
+import { Slider } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "Saturación";
+    width: 360px;
+    height: 150px;
+
+    in-out property <float> saturation: 100;
+    in property <bool> controls-enabled: true;
+    in property <string> error-text: "";
+    callback saturation-changed(float);
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+
+        HorizontalLayout {
+            Text {
+                text: "Saturación";
+                vertical-alignment: center;
+            }
+            Text {
+                text: "\{Math.round(root.saturation)}";
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+
+        Slider {
+            minimum: 0;
+            maximum: 400;
+            step: 1;
+            enabled: root.controls-enabled;
+            value <=> root.saturation;
+            changed(value) => {
+                root.saturation-changed(value);
+            }
+        }
+
+        Text {
+            text: root.error-text;
+            color: #c0392b;
+            wrap: word-wrap;
+        }
+    }
+}

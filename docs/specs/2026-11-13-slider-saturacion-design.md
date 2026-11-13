@@ -39,7 +39,7 @@ No incluye (otras historias): contraste (#2), brillo (#3), reacción visual de l
 
 ## Comportamiento
 
-- El slider va de **0 a 300** en pasos enteros. **100 es la imagen sin modificar**; 0 es escala de grises; 300 triplica la saturación.
+- El slider va de **0 a 400** en pasos enteros. **100 es la imagen sin modificar**; 0 es escala de grises; 400 cuadruplica la saturación. (El diseño original fijaba 300; se subió a 400 tras la prueba de riesgo, a pedido del usuario y con el driver respetando ese valor.)
 - Al abrir, el slider está en 100 y la app no escribe nada en la placa hasta el primer movimiento.
 - Cada cambio de valor se aplica de inmediato, sin botón de confirmar.
 - El valor se aplica a todas las pantallas activas de la placa Intel que reporten el bloque de matriz 3×3.
@@ -98,7 +98,7 @@ Los bindings FFI cubren solo esas funciones y sus structs. Se generan una vez co
 ## Flujo de datos
 
 ```
-slider (0–300) → main: s = valor / 100 → color::saturation_matrix(s)
+slider (0–400) → main: s = valor / 100 → color::saturation_matrix(s)
               → ColorBackend::apply_matrix → IGCL → bloque 3×3 de la placa
 ```
 
@@ -151,3 +151,18 @@ Si 1 o 3 fallan, se detiene la implementación y se vuelve a elegir mecanismo (p
 - Rust (rustup, toolchain `stable-x86_64-pc-windows-msvc`).
 - Build Tools de C++ de Visual Studio (enlazador MSVC y Windows SDK).
 - LLVM/libclang, solo para generar los bindings una vez.
+
+## Resultado de la prueba de riesgo
+
+- Fecha: 2026-11-13
+- Pantallas con bloque de matriz: 1 (pantalla interna, Intel UHD Graphics, driver 32.0.101.7077)
+- 300 % se distingue de 125 % (sí/no) y máximo utilizable: sí. 125 % resultó sutil a simple vista; 0 % dejó la pantalla en escala de grises, lo que confirma que la matriz se aplica. El usuario confirmó que 300 % se ve claramente más vivo que lo normal y que el panel de Intel al máximo. 400 % se ve más saturado que 300 %, así que el driver no recorta; a pedido del usuario el máximo del slider pasa a 400.
+- Grises sin teñir (sí/no): sí, en 300 % y 400 %.
+- Se mantiene en pantalla completa exclusiva (sí/no), juego usado: sí, con 400 % aplicado; el usuario no especificó el juego.
+- Tiempo de escritura (tres corridas): 1,22 ms (125 %), 1,08 ms (0 %), 1,48 ms (300 %); también 1,08 ms (400 %). Todas por debajo de 15 ms: la Task 5 usa la variante directa (Step 4a), sin coalescencia.
+
+## Resultado de la verificación de aceptación
+
+- Fecha: 2026-11-13, con la versión release que incluye los arreglos de la revisión final (commit ef54b01).
+- El usuario confirmó en pantalla: al abrir, slider en 100 sin mensaje de error y sin cambio de imagen; el color cambia en vivo al arrastrar, con 0 en grises y 400 saturado; al cerrar con el slider alto la imagen vuelve a la normal; abrir y cerrar sin tocar no cambia la imagen.
+- No verificado a mano: el camino de error sin driver de Intel (requiere desinstalar el driver). Lo cubren el test `write_error_reaches_caller_with_user_message` y la rama de error de `main`.

@@ -1,6 +1,6 @@
 # Slider de saturación (historia 1) — Plan de implementación
 
-**Goal:** Una app de Windows con un slider de 0 a 300 que sube la saturación de las pantallas conectadas a la placa Intel por encima del tope del panel de Intel, y la restaura al cerrar.
+**Goal:** Una app de Windows con un slider de 0 a 400 que sube la saturación de las pantallas conectadas a la placa Intel por encima del tope del panel de Intel, y la restaura al cerrar.
 
 **Architecture:** Un crate Rust con librería + binario. Una función pura calcula la matriz de saturación; un trait `ColorBackend` abstrae la placa; `IgclBackend` lo implementa cargando `ControlLib.dll` (IGCL, la API pública de Intel) y escribiendo la matriz en el bloque 3×3 del pipeline de pantalla; un `Controller` une slider y backend; la ventana es Slint.
 
@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Solo Windows x64, toolchain `stable-x86_64-pc-windows-msvc`.
-- El slider va de **0 a 300** en pasos enteros; **100 es la imagen sin modificar**.
+- El slider va de **0 a 400** en pasos enteros; **100 es la imagen sin modificar**. (Subido de 300 a 400 tras la prueba de riesgo de la Task 4; ver la spec.)
 - `ControlLib.dll` **no se distribuye** con la app y se carga **solo desde System32** (`LOAD_LIBRARY_SEARCH_SYSTEM32`), nunca desde la carpeta de la app ni del directorio actual.
 - La app no inyecta código ni lee memoria de otros procesos.
 - No se usa el flag `CTL_PIXTX_PIPE_SET_CONFIG_FLAG_PERSIST_ACROSS_POWER_EVENTS`.
@@ -515,7 +515,7 @@ Expected: un número mayor que 0.
 - [ ] **Step 2: Generar los bindings**
 
 ```powershell
-bindgen vendor/igcl/igcl_api.h -o src/igcl/bindings.rs --dynamic-loading ControlLib --dynamic-link-require-all --no-prepend-enum-name --allowlist-function "ctlInit|ctlClose|ctlEnumerateDevices|ctlEnumerateDisplayOutputs|ctlGetDisplayProperties|ctlPixelTransformationGetConfig|ctlPixelTransformationSetConfig" --allowlist-var "CTL_IMPL_MAJOR_VERSION|CTL_IMPL_MINOR_VERSION"
+bindgen vendor/igcl/igcl_api.h -o src/igcl/bindings.rs --dynamic-loading ControlLib --dynamic-link-require-all --no-prepend-enum-name --allowlist-function "ctlInit|ctlClose|ctlEnumerateDevices|ctlEnumerateDisplayOutputs|ctlGetDisplayProperties|ctlPixelTransformationGetConfig|ctlPixelTransformationSetConfig" --allowlist-var "CTL_IMPL_MAJOR_VERSION|CTL_IMPL_MINOR_VERSION" --allowlist-type "_ctl_display_config_flag_t" -- -include stdbool.h
 ```
 
 Verificar que están los símbolos que usa `mod.rs`:
@@ -995,7 +995,7 @@ export component AppWindow inherits Window {
 
         Slider {
             minimum: 0;
-            maximum: 300;
+            maximum: 400;
             step: 1;
             enabled: root.controls-enabled;
             value <=> root.saturation;
@@ -1013,7 +1013,7 @@ export component AppWindow inherits Window {
 }
 ```
 
-Si la Task 4 fijó un máximo menor a 300, usar ese valor en `maximum` y en `MAX_PERCENT` (`src/controller.rs`), y actualizar el `900 → 3.0` del test `value_above_maximum_is_clamped` al nuevo máximo.
+La Task 4 fijó el máximo en **400**. En esta tarea, además de la ventana: cambiar `MAX_PERCENT` a `400` en `src/controller.rs` y, en el test `value_above_maximum_is_clamped`, la expectativa `saturation_matrix(3.0)` por `saturation_matrix(4.0)` (la entrada 900 queda igual). Primero cambiar el test y verlo fallar, después la constante.
 
 - [ ] **Step 3: Verificar que la UI compila**
 
