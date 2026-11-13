@@ -52,7 +52,8 @@ pub trait ColorBackend {
         Err(BackendError::ToneCurveUnsupported)
     }
 
-    /// Si alguna pantalla admite curva de tono.
+    /// Si alguna pantalla admite curva de tono. Un backend que admite curvas debe
+    /// sobrescribir a la vez este método y `apply_tone_curve`.
     fn supports_tone_curve(&self) -> bool {
         false
     }

@@ -278,6 +278,8 @@ impl IgclBackend {
         let mut first_error = None;
         for output in &self.outputs {
             let Some(mut block) = output.curve else { continue };
+            // `Size` anidado es un campo `[in]`; asignar un campo `Copy` de una unión es seguro.
+            block.Config.OneDLutConfig.Size = size_of::<ctl_pixtx_1dlut_config_t>() as u32;
             if let Err(e) = self.set_block(
                 output.handle,
                 &mut block,
