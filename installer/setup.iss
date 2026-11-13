@@ -42,6 +42,9 @@ Source: "..\target\release\saturacion.exe"; DestDir: "{app}"; DestName: "{#AppEx
 Name: "{userprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{userdesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
+[InstallDelete]
+Type: files; Name: "{app}\icon.ico"
+
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#AppName}"; ValueData: """{app}\{#AppExe}"" --minimizado"; Tasks: autostart
 
@@ -53,10 +56,11 @@ Filename: "{app}\{#AppExe}"; Description: "Abrir {#AppName}"; Flags: nowait post
 procedure CloseRunningApp();
 var
   ResultCode: Integer;
-  Exe: String;
+  Exe, Version: String;
 begin
   Exe := ExpandConstant('{app}\{#AppExe}');
-  if FileExists(Exe) then
+  { Una versión vieja (sin recurso de versión) no entiende --salir y esperaría para siempre. }
+  if FileExists(Exe) and GetVersionNumbersString(Exe, Version) then
     Exec(Exe, '--salir', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
@@ -66,15 +70,11 @@ begin
   Result := '';
 end;
 
-function InitializeUninstall(): Boolean;
-begin
-  CloseRunningApp();
-  Result := True;
-end;
-
 { Al desinstalar borra la entrada de inicio aunque la haya creado la app y no el instalador. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
+  if CurUninstallStep = usUninstall then
+    CloseRunningApp();
   if CurUninstallStep = usPostUninstall then
     RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', '{#AppName}');
 end;
