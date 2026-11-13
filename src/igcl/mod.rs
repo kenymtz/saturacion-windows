@@ -332,15 +332,17 @@ impl Drop for IgclBackend {
     }
 }
 
-/// Bloque de matriz 3×3. Prefiere el de matriz sola; si no hay, el de matriz con offsets.
+/// Bloque de matriz 3×3 para la saturación. Prefiere la matriz con desplazamientos
+/// (el CSC de la tubería, antes de la curva de salida); la matriz sola suele ser el
+/// CSC de salida, que el driver usa para RGB→YCbCr en enlaces YCbCr.
 fn matrix_block(blocks: &[ctl_pixtx_block_config_t]) -> Option<ctl_pixtx_block_config_t> {
     blocks
         .iter()
-        .find(|b| b.BlockType == CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX)
+        .find(|b| b.BlockType == CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX_AND_OFFSETS)
         .or_else(|| {
             blocks
                 .iter()
-                .find(|b| b.BlockType == CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX_AND_OFFSETS)
+                .find(|b| b.BlockType == CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX)
         })
         .copied()
 }
@@ -409,5 +411,47 @@ mod tests {
             sample_curve(&|x| 1.0 - x, 3, 3),
             vec![1.0, 0.5, 0.0, 1.0, 0.5, 0.0, 1.0, 0.5, 0.0]
         );
+    }
+
+    fn block(id: u32, block_type: ctl_pixtx_block_type_t) -> ctl_pixtx_block_config_t {
+        // SAFETY: struct C plano; todo-ceros es válido.
+        let mut b: ctl_pixtx_block_config_t = unsafe { zeroed() };
+        b.BlockId = id;
+        b.BlockType = block_type;
+        b
+    }
+
+    /// Bloques en el orden que los reporta la Intel UHD de referencia.
+    fn uhd_blocks() -> Vec<ctl_pixtx_block_config_t> {
+        vec![
+            block(327425, CTL_PIXTX_BLOCK_TYPE_3D_LUT),
+            block(327426, CTL_PIXTX_BLOCK_TYPE_1D_LUT),
+            block(327427, CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX_AND_OFFSETS),
+            block(327428, CTL_PIXTX_BLOCK_TYPE_1D_LUT),
+            block(327429, CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX),
+        ]
+    }
+
+    #[test]
+    fn matrix_block_prefers_the_pipe_csc_over_the_output_csc() {
+        assert_eq!(matrix_block(&uhd_blocks()).map(|b| b.BlockId), Some(327427));
+    }
+
+    #[test]
+    fn matrix_block_falls_back_to_the_plain_matrix() {
+        let blocks = [
+            block(1, CTL_PIXTX_BLOCK_TYPE_1D_LUT),
+            block(2, CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX),
+        ];
+        assert_eq!(matrix_block(&blocks).map(|b| b.BlockId), Some(2));
+    }
+
+    #[test]
+    fn matrix_block_is_none_without_a_matrix() {
+        let blocks = [
+            block(1, CTL_PIXTX_BLOCK_TYPE_3D_LUT),
+            block(2, CTL_PIXTX_BLOCK_TYPE_1D_LUT),
+        ];
+        assert!(matrix_block(&blocks).is_none());
     }
 }
