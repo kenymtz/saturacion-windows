@@ -1,4 +1,4 @@
-//! Matriz de saturación. Función pura, sin dependencias de placa ni de UI.
+//! Ajustes de color: matriz de saturación y curva de contraste. Funciones puras, sin dependencias de placa ni de UI.
 
 /// Matriz 3×3 indexada `[fila][columna]`; salida = M × vector columna RGB.
 pub type Matrix3 = [[f64; 3]; 3];
@@ -18,6 +18,12 @@ pub fn saturation_matrix(s: f64) -> Matrix3 {
         }
     }
     m
+}
+
+/// Curva de contraste alrededor del gris medio: `y = clamp(0.5 + c·(x − 0.5), 0, 1)`.
+/// `c = 1.0` deja la imagen igual; `> 1.0` oscurece sombras y aclara luces; `< 1.0` aplana.
+pub fn contrast_curve(c: f64, x: f64) -> f64 {
+    (0.5 + c * (x - 0.5)).clamp(0.0, 1.0)
 }
 
 #[cfg(test)]
@@ -63,5 +69,54 @@ mod tests {
         assert!((m[0][0] - 2.5748).abs() < 1e-12);
         assert!((m[0][1] - (-1.4304)).abs() < 1e-12);
         assert!((m[0][2] - (-0.1444)).abs() < 1e-12);
+    }
+
+    fn close(a: f64, b: f64) -> bool {
+        (a - b).abs() < 1e-12
+    }
+
+    #[test]
+    fn contrast_one_is_identity() {
+        for x in [0.0, 0.1, 0.25, 0.5, 0.9, 1.0] {
+            assert!(close(contrast_curve(1.0, x), x), "x={x}");
+        }
+    }
+
+    #[test]
+    fn contrast_keeps_mid_gray_fixed() {
+        for c in [0.5, 1.0, 1.5, 2.0] {
+            assert!(close(contrast_curve(c, 0.5), 0.5), "c={c}");
+        }
+    }
+
+    #[test]
+    fn contrast_curve_never_decreases() {
+        for c in [0.5, 1.0, 1.5, 2.0] {
+            let mut previous = contrast_curve(c, 0.0);
+            for i in 1..=100 {
+                let y = contrast_curve(c, f64::from(i) / 100.0);
+                assert!(y >= previous, "c={c}, i={i}");
+                previous = y;
+            }
+        }
+    }
+
+    #[test]
+    fn contrast_output_stays_in_unit_range_and_clips() {
+        for c in [0.5, 2.0, 4.0] {
+            for i in 0..=100 {
+                let y = contrast_curve(c, f64::from(i) / 100.0);
+                assert!((0.0..=1.0).contains(&y), "c={c}, i={i}, y={y}");
+            }
+        }
+        assert_eq!(contrast_curve(2.0, 0.0), 0.0);
+        assert_eq!(contrast_curve(2.0, 1.0), 1.0);
+        assert_eq!(contrast_curve(2.0, 0.1), 0.0);
+    }
+
+    #[test]
+    fn half_contrast_flattens_toward_mid_gray() {
+        assert!(close(contrast_curve(0.5, 0.0), 0.25));
+        assert!(close(contrast_curve(0.5, 1.0), 0.75));
     }
 }

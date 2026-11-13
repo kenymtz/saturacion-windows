@@ -1,10 +1,14 @@
 //! Une el valor del slider con el backend de color.
 
 use crate::backend::{BackendError, ColorBackend};
-use crate::color::saturation_matrix;
+use crate::color::{contrast_curve, saturation_matrix};
 
-/// Máximo del slider, en porcentaje. 100 es la imagen sin modificar.
+/// Máximo del slider de saturación, en porcentaje. 100 es la imagen sin modificar.
 pub const MAX_PERCENT: u32 = 400;
+
+/// Rango del slider de contraste, en porcentaje. 100 es la imagen sin modificar.
+pub const MIN_CONTRAST_PERCENT: u32 = 50;
+pub const MAX_CONTRAST_PERCENT: u32 = 200;
 
 pub struct Controller<B: ColorBackend> {
     backend: B,
@@ -23,6 +27,18 @@ impl<B: ColorBackend> Controller<B> {
         let s = f64::from(percent.min(MAX_PERCENT)) / 100.0;
         self.wrote = true;
         self.backend.apply_matrix(&saturation_matrix(s))
+    }
+
+    /// Aplica el contraste indicado en porcentaje (100 = sin cambios), limitado a 50–200.
+    pub fn set_contrast(&mut self, percent: u32) -> Result<(), BackendError> {
+        let c = f64::from(percent.clamp(MIN_CONTRAST_PERCENT, MAX_CONTRAST_PERCENT)) / 100.0;
+        self.wrote = true;
+        self.backend.apply_tone_curve(&|x| contrast_curve(c, x))
+    }
+
+    /// Si la placa permite ajustar el contraste.
+    pub fn supports_contrast(&self) -> bool {
+        self.backend.supports_tone_curve()
     }
 
     /// Devuelve la imagen a la normal si la app llegó a modificarla.
@@ -50,24 +66,45 @@ mod tests {
     use super::*;
     use crate::color::Matrix3;
 
+    /// Puntos donde el backend falso muestrea la curva que recibe.
+    const SAMPLE_POINTS: [f64; 5] = [0.0, 0.25, 0.5, 0.75, 1.0];
+
     #[derive(Debug, PartialEq)]
     enum Call {
         Apply(Matrix3),
+        Curve(Vec<f64>),
         Restore,
     }
 
     struct FakeBackend {
         calls: Rc<RefCell<Vec<Call>>>,
         fail_with: Option<BackendError>,
+        curve_supported: bool,
+    }
+
+    impl FakeBackend {
+        fn result(&self) -> Result<(), BackendError> {
+            match &self.fail_with {
+                Some(e) => Err(e.clone()),
+                None => Ok(()),
+            }
+        }
     }
 
     impl ColorBackend for FakeBackend {
         fn apply_matrix(&mut self, matrix: &Matrix3) -> Result<(), BackendError> {
             self.calls.borrow_mut().push(Call::Apply(*matrix));
-            match &self.fail_with {
-                Some(e) => Err(e.clone()),
-                None => Ok(()),
-            }
+            self.result()
+        }
+
+        fn apply_tone_curve(&mut self, curve: &dyn Fn(f64) -> f64) -> Result<(), BackendError> {
+            let samples = SAMPLE_POINTS.iter().map(|&x| curve(x)).collect();
+            self.calls.borrow_mut().push(Call::Curve(samples));
+            self.result()
+        }
+
+        fn supports_tone_curve(&self) -> bool {
+            self.curve_supported
         }
 
         fn restore_default(&mut self) -> Result<(), BackendError> {
@@ -80,7 +117,7 @@ mod tests {
         fail_with: Option<BackendError>,
     ) -> (Controller<FakeBackend>, Rc<RefCell<Vec<Call>>>) {
         let calls = Rc::new(RefCell::new(Vec::new()));
-        let backend = FakeBackend { calls: Rc::clone(&calls), fail_with };
+        let backend = FakeBackend { calls: Rc::clone(&calls), fail_with, curve_supported: true };
         (Controller::new(backend), calls)
     }
 
@@ -154,5 +191,51 @@ mod tests {
         let (c, calls) = controller(None);
         drop(c);
         assert!(calls.borrow().is_empty());
+    }
+
+    #[test]
+    fn contrast_value_becomes_tone_curve_without_touching_the_matrix() {
+        let (mut c, calls) = controller(None);
+        c.set_contrast(150).unwrap();
+        assert_eq!(*calls.borrow(), vec![Call::Curve(vec![0.0, 0.125, 0.5, 0.875, 1.0])]);
+    }
+
+    #[test]
+    fn contrast_outside_range_is_clamped() {
+        let (mut c, calls) = controller(None);
+        c.set_contrast(900).unwrap();
+        c.set_contrast(10).unwrap();
+        assert_eq!(
+            *calls.borrow(),
+            vec![
+                Call::Curve(vec![0.0, 0.0, 0.5, 1.0, 1.0]),
+                Call::Curve(vec![0.25, 0.375, 0.5, 0.625, 0.75]),
+            ]
+        );
+    }
+
+    #[test]
+    fn contrast_write_error_reaches_caller() {
+        let (mut c, _) = controller(Some(BackendError::ApplyFailed(0x4000_0001)));
+        let err = c.set_contrast(150).unwrap_err();
+        assert_eq!(err.to_string(), "No se pudo aplicar el ajuste (IGCL 0x40000001).");
+    }
+
+    #[test]
+    fn shutdown_restores_after_a_contrast_write() {
+        let (mut c, calls) = controller(None);
+        c.set_contrast(150).unwrap();
+        c.shutdown().unwrap();
+        assert_eq!(calls.borrow().last(), Some(&Call::Restore));
+    }
+
+    #[test]
+    fn supports_contrast_reflects_backend() {
+        let (c, _) = controller(None);
+        assert!(c.supports_contrast());
+
+        let calls = Rc::new(RefCell::new(Vec::new()));
+        let backend = FakeBackend { calls, fail_with: None, curve_supported: false };
+        assert!(!Controller::new(backend).supports_contrast());
     }
 }
