@@ -13,11 +13,15 @@ use windows_sys::Win32::System::Threading::{
     EVENT_MODIFY_STATE, INFINITE, SYNCHRONIZATION_SYNCHRONIZE,
 };
 
+use windows_sys::Win32::UI::WindowsAndMessaging::AllowSetForegroundWindow;
+
 use super::wide;
 
 const MUTEX_NAME: &str = r"Local\AjustesDePantalla.Instancia";
 const SHOW_EVENT: &str = r"Local\AjustesDePantalla.Mostrar";
 const QUIT_EVENT: &str = r"Local\AjustesDePantalla.Salir";
+/// Cualquier proceso puede pasar al primer plano (`(DWORD)-1` en Win32).
+const ASFW_ANY: u32 = u32::MAX;
 
 /// Orden que una copia nueva le manda a la que corre.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,6 +111,10 @@ pub fn send(command: Command) -> bool {
     let event = unsafe { OpenEventW(EVENT_MODIFY_STATE, 0, name.as_ptr()) };
     if event.is_null() {
         return false;
+    }
+    if command == Command::Show {
+        // SAFETY: sin punteros; permite que la copia que corre tome el primer plano.
+        unsafe { AllowSetForegroundWindow(ASFW_ANY) };
     }
     // SAFETY: `event` es válido hasta CloseHandle.
     let signaled = unsafe { SetEvent(event) } != 0;

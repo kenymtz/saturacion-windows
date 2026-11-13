@@ -79,10 +79,16 @@ fn save_settings(ui: &AppWindow, path: Option<&Path>, values: Settings) {
 /// Vuelve todo a 100: restaura la placa, mueve los sliders y guarda.
 fn reset_all(ui: &AppWindow, controller: &SharedController, path: Option<&Path>) {
     let result = controller.borrow_mut().reset();
+    let reset_ok = result.is_ok();
     let neutral = Settings::default();
     show_settings(ui, neutral);
     show_result(ui, result);
-    save_settings(ui, path, neutral);
+    // El error de la pantalla gana: solo se avisa del guardado si el reinicio salió bien.
+    if reset_ok {
+        save_settings(ui, path, neutral);
+    } else if let Some(path) = path {
+        let _ = neutral.save(path);
+    }
 }
 
 /// Crea y muestra el ícono de la bandeja. `None` si la plataforma no lo permite.
@@ -128,11 +134,29 @@ fn main() -> Result<(), slint::PlatformError> {
 
     let ui = AppWindow::new()?;
 
+    // Órdenes de otras copias: llegan en otro hilo y se reenvían al de la interfaz.
+    // Se atienden desde ya para no perder un Mostrar/Salir mientras arranca IGCL.
+    let ui_weak = ui.as_weak();
+    instance.listen(move |command| match command {
+        Command::Show => {
+            let _ = ui_weak.upgrade_in_event_loop(|ui| {
+                let _ = ui.show();
+                ui.window().set_minimized(false);
+            });
+        }
+        Command::Quit => {
+            // En cola: si el bucle aún no arrancó, corre apenas arranca.
+            let _ = slint::invoke_from_event_loop(|| {
+                let _ = slint::quit_event_loop();
+            });
+        }
+    });
+
     let settings_path = settings::default_path();
     let saved = settings_path.as_deref().map(Settings::load).unwrap_or_default();
     show_settings(&ui, saved);
 
-    let controller = match IgclBackend::new() {
+    let (controller, startup_failed) = match IgclBackend::new() {
         Ok(backend) => {
             let mut controller = Controller::new(backend);
             if !controller.supports_tone_curve() {
@@ -141,13 +165,14 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             let applied =
                 controller.apply_saved(saved.saturation, saved.contrast, saved.brightness);
+            let failed = applied.is_err();
             show_result(&ui, applied);
-            Some(Rc::new(RefCell::new(controller)))
+            (Some(Rc::new(RefCell::new(controller))), failed)
         }
         Err(e) => {
             ui.set_error_text(e.to_string().into());
             ui.set_controls_enabled(false);
-            None
+            (None, true)
         }
     };
 
@@ -202,23 +227,9 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     };
     let tray = create_tray(&ui, tray_reset);
-    if tray.is_none() && controller.is_some() {
+    if tray.is_none() && controller.is_some() && ui.get_error_text().is_empty() {
         ui.set_error_text(TRAY_UNAVAILABLE.into());
     }
-
-    // Órdenes de otras copias: llegan en otro hilo y se reenvían al de la interfaz.
-    let ui_weak = ui.as_weak();
-    instance.listen(move |command| match command {
-        Command::Show => {
-            let _ = ui_weak.upgrade_in_event_loop(|ui| {
-                let _ = ui.show();
-                ui.window().set_minimized(false);
-            });
-        }
-        Command::Quit => {
-            let _ = slint::quit_event_loop();
-        }
-    });
 
     // Con controlador e ícono, la X solo oculta la ventana (el ícono mantiene vivo el
     // bucle). Sin alguno de los dos, la X termina la app.
@@ -230,8 +241,9 @@ fn main() -> Result<(), slint::PlatformError> {
         CloseRequestResponse::HideWindow
     });
 
-    // Con `--minimizado` y bandeja disponible, arranca solo con el ícono.
-    if !(start_minimized && tray.is_some()) {
+    // Con `--minimizado` y bandeja disponible, arranca solo con el ícono, salvo que
+    // el arranque haya fallado: el error tiene que verse.
+    if !(start_minimized && tray.is_some() && !startup_failed) {
         ui.show()?;
     }
     let run_result = slint::run_event_loop();
