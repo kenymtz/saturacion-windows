@@ -31,7 +31,7 @@ impl fmt::Display for BackendError {
                 write!(f, "Esta placa o este modo de pantalla no permite ajustar el color.")
             }
             Self::ToneCurveUnsupported => {
-                write!(f, "Esta placa o este modo de pantalla no permite ajustar el contraste.")
+                write!(f, "Esta placa o este modo de pantalla no permite ajustar el contraste ni el brillo.")
             }
             Self::ApplyFailed(code) => {
                 write!(f, "No se pudo aplicar el ajuste (IGCL 0x{code:08X}).")
@@ -94,7 +94,7 @@ mod tests {
     fn tone_curve_unsupported_has_user_message() {
         assert_eq!(
             BackendError::ToneCurveUnsupported.to_string(),
-            "Esta placa o este modo de pantalla no permite ajustar el contraste."
+            "Esta placa o este modo de pantalla no permite ajustar el contraste ni el brillo."
         );
     }
 }

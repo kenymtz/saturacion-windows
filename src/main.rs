@@ -24,7 +24,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let controller = match IgclBackend::new() {
         Ok(backend) => {
             let controller = Controller::new(backend);
-            if !controller.supports_contrast() {
+            if !controller.supports_tone_curve() {
                 ui.set_contrast_enabled(false);
                 ui.set_contrast_note(BackendError::ToneCurveUnsupported.to_string().into());
             }
