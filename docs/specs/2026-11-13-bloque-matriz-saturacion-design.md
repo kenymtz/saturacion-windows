@@ -1,7 +1,7 @@
 # Bloque de matriz de la saturación y su restauración
 
 Fecha: 2026-11-13
-Estado: diseño aprobado, pendiente de verificación en hardware
+Estado: implementada y verificada en hardware (plan: `docs/plans/2026-11-13-bloque-matriz-saturacion.md`)
 Origen: riesgo conocido (a) de `docs/specs/2026-11-13-contraste-design.md`.
 
 ## Problema
@@ -74,4 +74,12 @@ Si el bloque 327427 falla (la escritura da error, no se ve el efecto o no se man
 
 ## Resultado de la verificación en hardware
 
-Pendiente.
+- Fecha: 2026-11-13. Máquina de referencia: pantalla interna (RGB), Intel UHD Graphics, driver 32.0.101.7077.
+- Bloque usado: el probe informó "saturación en bloque 327427: matriz 3x3 con desplazamientos". Las escrituras devolvieron éxito.
+- Saturación 300: colores más vivos y grises neutros, sin tinte (sí).
+- Saturación 0: imagen en grises, sin tinte (sí).
+- Pantalla completa exclusiva: con saturación 300 el efecto se mantuvo dentro de un juego (sí); el usuario no especificó el juego.
+- Saturación 300 con contraste 150: se ven los dos efectos (sí).
+- Restauración con `RESTORE_DEFAULT`: en las tres corridas el probe imprimió "Restaurado." y la imagen volvió a la normal (sí).
+- Tiempo de escritura de la matriz en el bloque 327427: 5,65 ms, 5,48 ms y 4,47 ms (en la matriz 3×3 simple de la historia 1 era de 1 a 1,5 ms). Sigue por debajo de los 15 ms que la historia 2 fijó como límite para escribir sin coalescencia.
+- No hizo falta el plan alternativo: se mantiene la preferencia por la matriz con desplazamientos.
