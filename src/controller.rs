@@ -4,7 +4,7 @@ use crate::backend::{BackendError, ColorBackend};
 use crate::color::saturation_matrix;
 
 /// Máximo del slider, en porcentaje. 100 es la imagen sin modificar.
-pub const MAX_PERCENT: u32 = 300;
+pub const MAX_PERCENT: u32 = 400;
 
 pub struct Controller<B: ColorBackend> {
     backend: B,
@@ -88,7 +88,7 @@ mod tests {
     fn value_above_maximum_is_clamped() {
         let (mut c, calls) = controller(None);
         c.set_saturation(900).unwrap();
-        assert_eq!(*calls.borrow(), vec![Call::Apply(saturation_matrix(3.0))]);
+        assert_eq!(*calls.borrow(), vec![Call::Apply(saturation_matrix(4.0))]);
     }
 
     #[test]
