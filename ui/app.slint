@@ -1,5 +1,6 @@
-import { Button, CheckBox, Slider } from "std-widgets.slint";
+import { Button, CheckBox } from "std-widgets.slint";
 export { AppTray } from "tray.slint";
+import { NeutralSlider } from "neutral-slider.slint";
 
 export component AppWindow inherits Window {
     title: "Ajustes de pantalla";
@@ -38,7 +39,7 @@ export component AppWindow inherits Window {
             }
         }
 
-        Slider {
+        NeutralSlider {
             minimum: 0;
             maximum: 400;
             step: 1;
@@ -64,7 +65,7 @@ export component AppWindow inherits Window {
             }
         }
 
-        Slider {
+        NeutralSlider {
             minimum: 50;
             maximum: 200;
             step: 1;
@@ -90,7 +91,7 @@ export component AppWindow inherits Window {
             }
         }
 
-        Slider {
+        NeutralSlider {
             minimum: 50;
             maximum: 200;
             step: 1;

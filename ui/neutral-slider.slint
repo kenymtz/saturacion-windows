@@ -1,0 +1,60 @@
+import { Slider } from "std-widgets.slint";
+
+// Slider con una marca en el valor neutro. Tocar la marca lleva el valor a ese punto y
+// emite `changed` y `released`, igual que arrastrar y soltar.
+export component NeutralSlider inherits VerticalLayout {
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    in property <float> step: 1;
+    in property <float> neutral: 100;
+    in property <bool> enabled: true;
+    in-out property <float> value;
+    callback changed(float);
+    callback released(float);
+
+    spacing: 2px;
+
+    Slider {
+        minimum: root.minimum;
+        maximum: root.maximum;
+        step: root.step;
+        enabled: root.enabled;
+        value <=> root.value;
+        changed(value) => {
+            root.changed(value);
+        }
+        released(value) => {
+            root.released(value);
+        }
+    }
+
+    Rectangle {
+        height: 10px;
+
+        // El estilo Fluent dibuja el recorrido desde la mitad del círculo (10 px) hasta
+        // el ancho menos 10 px.
+        mark := TouchArea {
+            width: 16px;
+            height: parent.height;
+            x: 10px + (parent.width - 20px) * (root.neutral - root.minimum) / (root.maximum - root.minimum) - self.width / 2;
+            enabled: root.enabled;
+            mouse-cursor: pointer;
+            clicked => {
+                if (root.value != root.neutral) {
+                    root.value = root.neutral;
+                    root.changed(root.neutral);
+                    root.released(root.neutral);
+                }
+            }
+
+            Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: 0;
+                width: 2px;
+                height: 6px;
+                border-radius: 1px;
+                background: mark.has-hover && root.enabled ? #2d7ff9 : #8a8a8a;
+            }
+        }
+    }
+}
