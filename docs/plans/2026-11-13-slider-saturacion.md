@@ -515,7 +515,7 @@ Expected: un número mayor que 0.
 - [ ] **Step 2: Generar los bindings**
 
 ```powershell
-bindgen vendor/igcl/igcl_api.h -o src/igcl/bindings.rs --dynamic-loading ControlLib --dynamic-link-require-all --no-prepend-enum-name --allowlist-function "ctlInit|ctlClose|ctlEnumerateDevices|ctlEnumerateDisplayOutputs|ctlGetDisplayProperties|ctlPixelTransformationGetConfig|ctlPixelTransformationSetConfig" --allowlist-var "CTL_IMPL_MAJOR_VERSION|CTL_IMPL_MINOR_VERSION"
+bindgen vendor/igcl/igcl_api.h -o src/igcl/bindings.rs --dynamic-loading ControlLib --dynamic-link-require-all --no-prepend-enum-name --allowlist-function "ctlInit|ctlClose|ctlEnumerateDevices|ctlEnumerateDisplayOutputs|ctlGetDisplayProperties|ctlPixelTransformationGetConfig|ctlPixelTransformationSetConfig" --allowlist-var "CTL_IMPL_MAJOR_VERSION|CTL_IMPL_MINOR_VERSION" --allowlist-type "_ctl_display_config_flag_t" -- -include stdbool.h
 ```
 
 Verificar que están los símbolos que usa `mod.rs`:
