@@ -1,7 +1,7 @@
 # App minimizada en la bandeja del sistema
 
 Fecha: 2026-11-13
-Estado: diseño aprobado, pendiente de plan de implementación
+Estado: implementada y verificada en hardware (plan: `docs/plans/2026-11-13-bandeja.md`)
 Depende de: historias 1 a 3. La rama sale de la historia 3 (`story-3-brightness`) mientras su PR siga abierto.
 
 ## Pedido
@@ -75,3 +75,9 @@ Comprobación temprana: después de agregar el ícono, el usuario confirma que a
 - Evitar dos instancias a la vez. Riesgo conocido: con la app oculta es más fácil abrirla otra vez sin notarlo; las dos instancias escribirían los mismos bloques y al salir una restauraría la imagen de la otra. Se resuelve aparte.
 - Notificaciones o globos del ícono.
 - Restaurar al cerrar sesión o apagar Windows. Riesgo conocido: con la app en la bandeja es más probable cerrar sesión o apagar sin usar "Salir"; Windows termina el proceso sin que corra la restauración, y lo mismo pasa si se lo mata desde el Administrador de tareas. Los ajustes quedan aplicados hasta el próximo evento de energía o reinicio del driver (la app no usa el flag de persistencia de IGCL, así que no sobreviven a un reinicio).
+
+## Resultado de la verificación de aceptación
+
+- Fecha: 2026-11-13, con la versión release del commit 2010d94.
+- El usuario confirmó en pantalla: el ícono aparece en la ventana y en la bandeja con el tooltip "Ajustes de pantalla"; la X oculta la ventana (también de la barra de tareas) con los ajustes aplicados; el clic izquierdo y "Abrir" vuelven a mostrar la ventana con los valores intactos; con la ventana oculta los ajustes se mantienen en un juego en pantalla completa exclusiva y el consumo de CPU es prácticamente nulo; "Salir" restaura la imagen y quita el ícono; abrir y salir sin tocar no cambia la imagen.
+- No verificado a mano: el cierre con la inicialización fallida (sin driver de Intel) y la falla de registro del ícono (no reproducibles en esta máquina).
