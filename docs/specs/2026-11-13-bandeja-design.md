@@ -52,6 +52,7 @@ Puntos del componente que el diseño usa (documentación de Slint):
 
 - Si crear el ícono falla (Slint devuelve error al crear el componente), la app sigue funcionando como hasta ahora, sin bandeja: la X termina la app y restaura. Se registra el motivo en la nota de error de la ventana: "No se pudo crear el ícono de la bandeja; cerrar la ventana termina la app."
 - Los errores de escritura y de inicialización se muestran como en la historia 3.
+- Limitación encontrada en la revisión: en Slint 1.18.1 crear y mostrar el componente no tocan todavía la bandeja del sistema; el registro real del ícono ocurre después y, si falla, Slint solo lo anota en su log de depuración. Por eso el mensaje de bandeja no disponible prácticamente no se puede disparar. Si el registro fallara, el ícono no mantiene vivo el bucle: la X oculta la ventana, el bucle termina y la app restaura y sale, sin quedar invisible. Se pierde solo el aviso.
 
 ## Verificación
 
@@ -73,3 +74,4 @@ Comprobación temprana: después de agregar el ícono, el usuario confirma que a
 - Arrancar con Windows ya minimizada: va con la historia 9 (recordar valores).
 - Evitar dos instancias a la vez. Riesgo conocido: con la app oculta es más fácil abrirla otra vez sin notarlo; las dos instancias escribirían los mismos bloques y al salir una restauraría la imagen de la otra. Se resuelve aparte.
 - Notificaciones o globos del ícono.
+- Restaurar al cerrar sesión o apagar Windows. Riesgo conocido: con la app en la bandeja es más probable cerrar sesión o apagar sin usar "Salir"; Windows termina el proceso sin que corra la restauración, y lo mismo pasa si se lo mata desde el Administrador de tareas. Los ajustes quedan aplicados hasta el próximo evento de energía o reinicio del driver (la app no usa el flag de persistencia de IGCL, así que no sobreviven a un reinicio).
