@@ -43,7 +43,7 @@ No incluye (otras historias): contraste (#2), brillo (#3), reacción visual de l
 - Al abrir, el slider está en 100 y la app no escribe nada en la placa hasta el primer movimiento.
 - Cada cambio de valor se aplica de inmediato, sin botón de confirmar.
 - El valor se aplica a todas las pantallas activas de la placa Intel que reporten el bloque de matriz 3×3.
-- Al cerrar la ventana, la app escribe la matriz identidad en el bloque y termina. No se usa el flag de persistencia entre eventos de energía de IGCL.
+- Al cerrar la ventana, si la app llegó a escribir en la placa, escribe la matriz identidad en el bloque y termina; si nunca se movió el slider, no toca nada. No se usa el flag de persistencia entre eventos de energía de IGCL.
 - Mientras la app está abierta se considera dueña del bloque de matriz: un ajuste de tono o saturación hecho en el panel de Intel al mismo tiempo puede pisarse mutuamente con el de la app. Es una limitación aceptada.
 
 ## Matriz de saturación
@@ -85,7 +85,7 @@ Límites:
 
 ### Uso de IGCL
 
-Secuencia de inicialización: `ctlInit` → `ctlEnumerateDevices` → `ctlEnumerateDisplayOutputs` → `ctlGetDisplayProperties` (filtrar salidas activas) → `ctlPixelTransformationGetConfig` para leer las capacidades y ubicar el bloque de tipo `CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX`.
+Secuencia de inicialización: `ctlInit` → `ctlEnumerateDevices` → `ctlEnumerateDisplayOutputs` → `ctlGetDisplayProperties` (filtrar salidas activas) → `ctlPixelTransformationGetConfig` para leer las capacidades y ubicar el bloque de tipo `CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX` o, si no existe, `CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX_AND_OFFSETS`.
 
 Aplicar: `ctlPixelTransformationSetConfig` con un solo bloque, operación `CTL_PIXTX_CONFIG_OPERTAION_TYPE_SET_CUSTOM`, la matriz en `Config.MatrixConfig.Matrix` y offsets en cero.
 
@@ -123,7 +123,7 @@ Si falla la restauración al cerrar, la app termina igual; no hay a quién mostr
 
 Antes de construir la UI, un binario de consola mínimo (parte del mismo crate, como ejemplo o subcomando) que aplica un factor dado y espera una tecla para restaurar. Debe confirmar en la máquina de referencia:
 
-1. La UHD reporta un bloque `CTL_PIXTX_BLOCK_TYPE_3X3_MATRIX`.
+1. La UHD reporta un bloque de matriz 3×3 (con o sin offsets).
 2. El driver acepta la matriz para `s = 3` y el resultado visible es más saturado que con `s = 1.25` (el máximo del ejemplo de Intel), es decir, no se recorta.
 3. Con un factor aplicado, el efecto se mantiene al entrar a un juego en pantalla completa exclusiva.
 4. Tiempo de una escritura, para decidir si hace falta coalescencia.
