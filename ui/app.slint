@@ -1,12 +1,15 @@
-import { Button, CheckBox } from "std-widgets.slint";
+import { Button, CheckBox, ComboBox } from "std-widgets.slint";
 export { AppTray } from "tray.slint";
 import { NeutralSlider } from "neutral-slider.slint";
 
 export component AppWindow inherits Window {
-    title: "Ajustes de pantalla";
+    title: root.english ? "Display Settings" : "Ajustes de pantalla";
     icon: @image-url("icon.png");
     width: 360px;
 
+    // Idioma de la interfaz: false = español, true = inglés.
+    in-out property <bool> english: false;
+    callback language-changed(bool);
     in-out property <float> saturation: 100;
     in-out property <float> contrast: 100;
     in-out property <float> brightness: 100;
@@ -29,7 +32,7 @@ export component AppWindow inherits Window {
 
         HorizontalLayout {
             Text {
-                text: "Saturación";
+                text: root.english ? "Saturation" : "Saturación";
                 vertical-alignment: center;
             }
             Text {
@@ -55,7 +58,7 @@ export component AppWindow inherits Window {
 
         HorizontalLayout {
             Text {
-                text: "Contraste";
+                text: root.english ? "Contrast" : "Contraste";
                 vertical-alignment: center;
             }
             Text {
@@ -81,7 +84,7 @@ export component AppWindow inherits Window {
 
         HorizontalLayout {
             Text {
-                text: "Brillo";
+                text: root.english ? "Brightness" : "Brillo";
                 vertical-alignment: center;
             }
             Text {
@@ -105,17 +108,31 @@ export component AppWindow inherits Window {
             }
         }
 
-        CheckBox {
-            text: "Iniciar con Windows";
-            enabled: root.autostart-available;
-            checked <=> root.autostart;
-            toggled => {
-                root.autostart-toggled(self.checked);
+        HorizontalLayout {
+            spacing: 12px;
+
+            CheckBox {
+                text: root.english ? "Start with Windows" : "Iniciar con Windows";
+                enabled: root.autostart-available;
+                checked <=> root.autostart;
+                toggled => {
+                    root.autostart-toggled(self.checked);
+                }
+            }
+
+            ComboBox {
+                width: 112px;
+                model: ["Español", "English"];
+                current-index: root.english ? 1 : 0;
+                selected(value) => {
+                    root.english = self.current-index == 1;
+                    root.language-changed(root.english);
+                }
             }
         }
 
         Button {
-            text: "Restablecer";
+            text: root.english ? "Reset" : "Restablecer";
             enabled: root.controls-enabled;
             clicked => {
                 root.reset-requested();
