@@ -1,6 +1,7 @@
 export component AppTray inherits SystemTrayIcon {
     icon: @image-url("icon.png");
-    tooltip: "Ajustes de pantalla";
+    in property <bool> english: false;
+    tooltip: root.english ? "Display Settings" : "Ajustes de pantalla";
 
     callback open();
     callback quit();
@@ -12,20 +13,20 @@ export component AppTray inherits SystemTrayIcon {
 
     Menu {
         MenuItem {
-            title: "Abrir";
+            title: root.english ? "Open" : "Abrir";
             activated => {
                 root.open();
             }
         }
         MenuItem {
-            title: "Restablecer";
+            title: root.english ? "Reset" : "Restablecer";
             activated => {
                 root.reset();
             }
         }
         MenuSeparator { }
         MenuItem {
-            title: "Salir";
+            title: root.english ? "Quit" : "Salir";
             activated => {
                 root.quit();
             }

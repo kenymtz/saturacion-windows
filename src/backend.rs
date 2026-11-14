@@ -3,6 +3,7 @@
 use std::fmt;
 
 use crate::color::Matrix3;
+use crate::language::Language;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BackendError {
@@ -18,25 +19,49 @@ pub enum BackendError {
     ApplyFailed(u32),
 }
 
-impl fmt::Display for BackendError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::DriverNotFound => {
-                write!(f, "No se encontró el driver de gráficos de Intel.")
+impl BackendError {
+    /// Mensaje para el usuario en el idioma de la interfaz.
+    pub fn message(&self, language: Language) -> String {
+        match (self, language) {
+            (Self::DriverNotFound, Language::Spanish) => {
+                "No se encontró el driver de gráficos de Intel.".into()
             }
-            Self::NoActiveDisplay => {
-                write!(f, "Ninguna pantalla activa está conectada a la placa Intel.")
+            (Self::DriverNotFound, Language::English) => {
+                "Intel's graphics driver wasn't found.".into()
             }
-            Self::MatrixUnsupported => {
-                write!(f, "Esta placa o este modo de pantalla no permite ajustar el color.")
+            (Self::NoActiveDisplay, Language::Spanish) => {
+                "Ninguna pantalla activa está conectada a la placa Intel.".into()
             }
-            Self::ToneCurveUnsupported => {
-                write!(f, "Esta placa o este modo de pantalla no permite ajustar el contraste ni el brillo.")
+            (Self::NoActiveDisplay, Language::English) => {
+                "No active display is connected to the Intel graphics.".into()
             }
-            Self::ApplyFailed(code) => {
-                write!(f, "No se pudo aplicar el ajuste (IGCL 0x{code:08X}).")
+            (Self::MatrixUnsupported, Language::Spanish) => {
+                "Esta placa o este modo de pantalla no permite ajustar el color.".into()
+            }
+            (Self::MatrixUnsupported, Language::English) => {
+                "This graphics card or display mode doesn't allow color adjustments.".into()
+            }
+            (Self::ToneCurveUnsupported, Language::Spanish) => {
+                "Esta placa o este modo de pantalla no permite ajustar el contraste ni el brillo."
+                    .into()
+            }
+            (Self::ToneCurveUnsupported, Language::English) => {
+                "This graphics card or display mode doesn't allow contrast or brightness adjustments."
+                    .into()
+            }
+            (Self::ApplyFailed(code), Language::Spanish) => {
+                format!("No se pudo aplicar el ajuste (IGCL 0x{code:08X}).")
+            }
+            (Self::ApplyFailed(code), Language::English) => {
+                format!("Couldn't apply the setting (IGCL 0x{code:08X}).")
             }
         }
+    }
+}
+
+impl fmt::Display for BackendError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message(Language::Spanish))
     }
 }
 
