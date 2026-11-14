@@ -36,6 +36,7 @@ La app está escrita en **Rust** para que gaste lo mínimo mientras jugás: se c
 - **Saturación** de 0 a 400, **contraste** y **brillo** de 50 a 200 (100 = sin cambios).
 - Debajo de cada control hay una **marca en el 100**: al tocarla, el valor vuelve a 100.
 - Recuerda los valores y puede **iniciar con Windows**, minimizada en la bandeja.
+- Interfaz en **español o inglés**: se elige en el selector de la ventana y se recuerda. En inglés, la app se llama *Display Settings*.
 - **Restablecer** vuelve todo a la imagen normal.
 - Cerrar la ventana la deja en la bandeja; **Salir** desde el ícono restaura la imagen y cierra.
 
@@ -100,10 +101,9 @@ The app is written in **Rust** so it uses as little as possible while you play: 
 - **Saturation** from 0 to 400, **contrast** and **brightness** from 50 to 200 (100 = unchanged).
 - A **mark at 100** under each slider: click it to snap the value back to 100.
 - Remembers your values and can **start with Windows**, minimized to the tray.
-- **Restablecer** (Reset) brings everything back to the normal image.
-- Closing the window keeps the app in the tray; **Salir** (Quit) from the tray icon restores the image and exits.
-
-The interface is in Spanish.
+- **Spanish or English** interface: pick it in the window's language selector and it's remembered. In English the app is called *Display Settings*.
+- **Reset** (*Restablecer* in Spanish) brings everything back to the normal image.
+- Closing the window keeps the app in the tray; **Quit** from the tray icon restores the image and exits.
 
 ### Requirements
 
